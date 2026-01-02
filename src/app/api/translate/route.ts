@@ -4,6 +4,7 @@ import { rateLimitOrThrow } from "@/lib/ratelimit";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
+const MAX_FILE_SIZE_BYTES = 512 * 1024; // 0.5 MB
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -167,6 +168,17 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Expected form-data field 'file' (SRT)" },
       { status: 400 }
+    );
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return NextResponse.json(
+      {
+        error: "File too large",
+        maxBytes: MAX_FILE_SIZE_BYTES,
+        receivedBytes: file.size,
+      },
+      { status: 413 }
     );
   }
 
