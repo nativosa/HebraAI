@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { rateLimitOrThrow } from "@/lib/ratelimit";
+
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
 
@@ -124,12 +126,38 @@ function isDialogueLike(text: string): boolean {
   return /[A-Za-z\u0590-\u05FF0-9]/.test(text);
 }
 
-
+function getClientIp(req: Request): string {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0].trim();
+  return "unknown";
+}
 
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
+  }
+
+  const ip = getClientIp(req);
+
+  // 2 requests per 120 seconds per IP
+  const rl = await rateLimitOrThrow({
+    key: `translate:${ip}`,
+    limit: 2,
+    windowSec: 120,
+  });
+
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": String(rl.remaining),
+        },
+      }
+    );
   }
 
   const form = await req.formData();
