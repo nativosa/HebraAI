@@ -5,12 +5,11 @@ export const config = {
   matcher: ["/api/translate"],
 };
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const user = process.env.TRANSLATE_BASIC_USER;
   const pass = process.env.TRANSLATE_BASIC_PASS;
 
-  // If not configured, don't block (safer for troubleshooting),
-  // but you can flip this to block instead.
+  // If not configured, allow requests through (helps avoid accidental lockout).
   if (!user || !pass) return NextResponse.next();
 
   const auth = req.headers.get("authorization");
