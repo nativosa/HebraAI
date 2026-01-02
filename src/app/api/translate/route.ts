@@ -126,13 +126,11 @@ function isDialogueLike(text: string): boolean {
   return /[A-Za-z\u0590-\u05FF0-9]/.test(text);
 }
 
-
 function getClientIp(req: Request): string {
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return "unknown";
 }
-
 
 
 export async function POST(req: Request) {
