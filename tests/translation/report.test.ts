@@ -28,7 +28,7 @@ describe("describeParseReport", () => {
 });
 
 describe("describePartial", () => {
-  const base = { removedSoundEffectCues: 0, parse: { recovered: [], unparsed: [] } };
+  const base = { requests: 1, repairs: 0, removedSoundEffectCues: 0, parse: { recovered: [], unparsed: [] } };
   const u = (id: number, number: number | null, reason: "missing" | "refusal") => ({
     id,
     number,

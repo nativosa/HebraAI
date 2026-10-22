@@ -4,9 +4,13 @@ import { buildSrt } from "@/lib/srt/build";
 import type { Cue } from "@/lib/srt/parse";
 import { buildChunkRequest } from "./prompt";
 import { FAILURE_LABELS, type TranslationReport } from "./report";
-import { validateChunkResponse, type FailureReason, type ModelResponse } from "./response";
+import { REPAIRABLE, validateChunkResponse, type FailureReason, type ModelResponse } from "./response";
 
 export const CHUNK_SIZE = 60;
+
+// Default limit on API requests per chunk: the first request, repairs and
+// (transient-error) retries all count.
+export const DEFAULT_MAX_ATTEMPTS_PER_CHUNK = 6;
 
 // Sends one request to the model; the route passes the OpenAI client here.
 export type CreateResponse = (params: ResponseCreateParamsNonStreaming) => Promise<ModelResponse>;
@@ -23,6 +27,11 @@ export type StreamEvent =
 // Facts about the input that the final report carries through.
 export type TranslateContext = Pick<TranslationReport, "parse" | "removedSoundEffectCues">;
 
+export type TranslateOptions = {
+  context?: TranslateContext;
+  maxAttemptsPerChunk?: number;
+};
+
 const NO_CONTEXT: TranslateContext = { parse: { recovered: [], unparsed: [] }, removedSoundEffectCues: 0 };
 
 export function chunk<T>(arr: T[], size: number): T[][] {
@@ -31,6 +40,20 @@ export function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+// Failures that make the whole answer unusable (rather than single cues).
+const WHOLE_ANSWER_FAILURES: ReadonlySet<FailureReason> = new Set(["invalid-json", "invalid-shape", "incomplete"]);
+
+// Shared state of one translation job.
+type Job = {
+  createResponse: CreateResponse;
+  instructions: string;
+  maxAttempts: number;
+  translations: Map<number, string>;
+  failed: Map<number, FailureReason>;
+  requests: number;
+  repairs: number;
+};
+
 // Translates the cues chunk by chunk (sequentially), yielding a progress event
 // after each chunk and then one final event. A request that fails stops the
 // job; chunks translated before it are kept.
@@ -38,24 +61,29 @@ export async function* translateCues(
   createResponse: CreateResponse,
   cues: Cue[],
   instructions: string,
-  context: TranslateContext = NO_CONTEXT
+  { context = NO_CONTEXT, maxAttemptsPerChunk = DEFAULT_MAX_ATTEMPTS_PER_CHUNK }: TranslateOptions = {}
 ): AsyncGenerator<StreamEvent> {
   const cuesChunks = chunk(cues, CHUNK_SIZE);
   const totalChunks = cuesChunks.length;
-  const translations = new Map<number, string>();
-  const failed = new Map<number, FailureReason>();
+  const job: Job = {
+    createResponse,
+    instructions,
+    maxAttempts: maxAttemptsPerChunk,
+    translations: new Map(),
+    failed: new Map(),
+    requests: 0,
+    repairs: 0,
+  };
   let failure: string | undefined;
 
   for (let chunkIndex = 0; chunkIndex < cuesChunks.length; chunkIndex++) {
-    const cuesPart = cuesChunks[chunkIndex];
     try {
-      const response = await createResponse(buildChunkRequest(instructions, cuesPart));
-      const result = validateChunkResponse(cuesPart, response);
-      result.translations.forEach((text, id) => translations.set(id, text));
-      result.failed.forEach((reason, id) => failed.set(id, reason));
+      await translateChunk(job, cuesChunks[chunkIndex]);
     } catch (error) {
       failure = errorMessage(error);
-      for (const c of cuesChunks.slice(chunkIndex).flat()) failed.set(c.id, "request-failed");
+      for (const c of cuesChunks.slice(chunkIndex).flat()) {
+        if (!job.translations.has(c.id) && !job.failed.has(c.id)) job.failed.set(c.id, "request-failed");
+      }
       break;
     }
 
@@ -68,22 +96,56 @@ export async function* translateCues(
     };
   }
 
-  yield finalEvent(cues, translations, failed, failure, context);
+  yield finalEvent(cues, job, failure, context);
 }
 
-function finalEvent(
-  cues: Cue[],
-  translations: Map<number, string>,
-  failed: Map<number, FailureReason>,
-  failure: string | undefined,
-  context: TranslateContext
-): StreamEvent {
+// One chunk: a request for all its cues, then (budget permitting) one repair
+// round for cues with technical or structural failures. Refusals and
+// content-filter results are never repaired. Request errors are thrown.
+async function translateChunk(job: Job, cues: Cue[]): Promise<void> {
+  let budget = job.maxAttempts;
+  const send = async (subset: Cue[]) => {
+    budget--;
+    job.requests++;
+    const response = await job.createResponse(buildChunkRequest(job.instructions, subset));
+    const result = validateChunkResponse(subset, response);
+    result.translations.forEach((text, id) => {
+      job.translations.set(id, text);
+      job.failed.delete(id);
+    });
+    result.failed.forEach((reason, id) => job.failed.set(id, reason));
+  };
+
+  if (budget < 1) {
+    for (const c of cues) job.failed.set(c.id, "request-failed");
+    return;
+  }
+  await send(cues);
+
+  const repairable = cues.filter((c) => REPAIRABLE.has(job.failed.get(c.id)!));
+  if (repairable.length === 0) return;
+
+  // When the whole answer was unusable, ask again in two halves (smaller
+  // answers are less likely to be cut off); otherwise only the failed cues.
+  const wholeChunkFailed = cues.length > 1 && cues.every((c) => WHOLE_ANSWER_FAILURES.has(job.failed.get(c.id)!));
+  const groups = wholeChunkFailed ? chunk(repairable, Math.ceil(repairable.length / 2)) : [repairable];
+  for (const group of groups) {
+    if (budget < 1) break;
+    job.repairs++;
+    await send(group);
+  }
+}
+
+function finalEvent(cues: Cue[], job: Job, failure: string | undefined, context: TranslateContext): StreamEvent {
+  const { translations, failed } = job;
   const report: TranslationReport = {
     cues: cues.length,
     translated: translations.size,
     untranslated: cues
       .filter((c) => failed.has(c.id))
       .map((c) => ({ id: c.id, number: c.number, start: c.start, end: c.end, reason: failed.get(c.id)! })),
+    requests: job.requests,
+    repairs: job.repairs,
     ...(failure === undefined ? {} : { failure }),
     ...context,
   };

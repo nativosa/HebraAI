@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSrt } from "@/lib/srt/parse";
-import { CHUNK_SIZE, chunk, translateCues, type StreamEvent } from "@/lib/translation/pipeline";
+import { CHUNK_SIZE, DEFAULT_MAX_ATTEMPTS_PER_CHUNK, chunk, translateCues, type StreamEvent } from "@/lib/translation/pipeline";
 import { buildChunkRequest } from "@/lib/translation/prompt";
 import { cue, cues } from "../helpers/cues";
 import { readGolden, readExpected, readSrtFixture } from "../helpers/fixtures";
@@ -121,7 +121,7 @@ describe("translateCues: output order and report", () => {
   it("reports counts and carries the input context", async () => {
     const parse = { recovered: [{ line: 9, kind: "missing-number" as const }], unparsed: [] };
     const events = await collect(
-      translateCues(stubModel().createResponse, cues(3), "instr", { parse, removedSoundEffectCues: 2 })
+      translateCues(stubModel().createResponse, cues(3), "instr", { context: { parse, removedSoundEffectCues: 2 } })
     );
     expect(events.at(-1)).toMatchObject({
       type: "complete",
@@ -138,8 +138,9 @@ describe("translateCues: validation and partial results", () => {
     expect(final(events)).toMatchObject({ type: "complete", report: { cues: 3, translated: 3, untranslated: [] } });
   });
 
-  it("D12 (fixed): a missing item makes the result partial; that cue keeps its English text", async () => {
-    const events = await collect(translateCues(stubModel({ 1: itemsFor(1, 3) }).createResponse, cues(3), "instr"));
+  it("D12 (fixed): a cue still missing after repair makes the result partial; it keeps its English text", async () => {
+    const model = stubModel({ 1: itemsFor(1, 3), 2: itemsFor() });
+    const events = await collect(translateCues(model.createResponse, cues(3), "instr"));
     expect(final(events)).toEqual({
       type: "partial",
       content:
@@ -150,6 +151,8 @@ describe("translateCues: validation and partial results", () => {
         cues: 3,
         translated: 2,
         untranslated: [{ id: 2, number: 2, start: "00:00:01,000", end: "00:00:02,000", reason: "missing" }],
+        requests: 2,
+        repairs: 1,
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -158,7 +161,7 @@ describe("translateCues: validation and partial results", () => {
 
   it("an invalid chunk does not stop later chunks", async () => {
     const model = stubModel({ 2: "Sorry, I can't do that." });
-    const events = await collect(translateCues(model.createResponse, cues(150), "instr"));
+    const events = await collect(translateCues(model.createResponse, cues(150), "instr", { maxAttemptsPerChunk: 1 }));
     expect(events.filter((e) => e.type === "progress").map((e) => e.progress)).toEqual([33, 67, 100]);
     const last = final(events);
     expect(last.type).toBe("partial");
@@ -205,5 +208,93 @@ describe("translateCues: validation and partial results", () => {
   it("an API error on the first chunk is an error event with its message", async () => {
     const last = final(await collect(translateCues(stubModel({ 1: new Error("401 Unauthorized") }).createResponse, cues(2), "instr")));
     expect(last).toMatchObject({ type: "error", message: "401 Unauthorized", report: { translated: 0 } });
+  });
+});
+
+describe("translateCues: selective repair", () => {
+  const final = (events: StreamEvent[]) => events.at(-1)!;
+  const run = async (outputs: Parameters<typeof stubModel>[0], n: number, maxAttemptsPerChunk?: number) => {
+    const model = stubModel(outputs);
+    const events = await collect(translateCues(model.createResponse, cues(n), "instr", { maxAttemptsPerChunk }));
+    return { model, last: final(events) };
+  };
+  const sizes = (model: ReturnType<typeof stubModel>) => model.calls.map((p) => itemsSent(p).length);
+
+  it("re-sends only the missing cues, in the same request format", async () => {
+    const { model, last } = await run({ 1: itemsFor(1, 3) }, 3);
+    expect(last).toMatchObject({ type: "complete", report: { requests: 2, repairs: 1, translated: 3 } });
+    expect(itemsSent(model.calls[1])).toEqual([{ index: 2, text: "Line 2" }]);
+    expect(model.calls[1].instructions).toBe(model.calls[0].instructions);
+  });
+
+  it.each([
+    ["invalid JSON", "not json"],
+    ["wrong shape", "{}"],
+    ["incomplete answer", incompleteResponse("max_output_tokens")],
+  ] as const)("a wholly unusable answer (%s) is repaired in two halves", async (_label, reply) => {
+    const { model, last } = await run({ 1: reply }, 60);
+    expect(sizes(model)).toEqual([60, 30, 30]);
+    expect(last).toMatchObject({ type: "complete", report: { requests: 3, repairs: 2 } });
+  });
+
+  it.each([
+    ["refusal", refusalResponse],
+    ["content filter", incompleteResponse("content_filter")],
+  ] as const)("a %s is never repaired", async (_label, reply) => {
+    const { model, last } = await run({ 1: reply }, 3);
+    expect(model.calls).toHaveLength(1);
+    expect(last).toMatchObject({ type: "error", report: { requests: 1, repairs: 0 } });
+  });
+
+  it("repairs once only: cues still failing after the repair stay untranslated", async () => {
+    const { model, last } = await run({ 1: itemsFor(1), 2: itemsFor(2) }, 3);
+    expect(model.calls).toHaveLength(2);
+    expect(last.type).toBe("partial");
+    if (last.type === "partial") expect(last.report.untranslated.map((u) => [u.id, u.reason])).toEqual([[3, "missing"]]);
+  });
+
+  it("an empty or conflicting translation is repaired", async () => {
+    const reply = JSON.stringify({ items: [{ index: 1, text_he: "" }, { index: 2, text_he: "A" }, { index: 2, text_he: "B" }] });
+    const { model, last } = await run({ 1: reply }, 2);
+    expect(itemsSent(model.calls[1]).map((i) => i.index)).toEqual([1, 2]);
+    expect(last.type).toBe("complete");
+  });
+});
+
+describe("translateCues: per-chunk request budget", () => {
+  const final = (events: StreamEvent[]) => events.at(-1)!;
+
+  it("defaults to 6 attempts per chunk", () => {
+    expect(DEFAULT_MAX_ATTEMPTS_PER_CHUNK).toBe(6);
+  });
+
+  it("budget 1: no repair, the cue stays untranslated", async () => {
+    const model = stubModel({ 1: itemsFor(1) });
+    const last = final(await collect(translateCues(model.createResponse, cues(2), "instr", { maxAttemptsPerChunk: 1 })));
+    expect(model.calls).toHaveLength(1);
+    expect(last).toMatchObject({ type: "partial", report: { requests: 1, repairs: 0, translated: 1 } });
+  });
+
+  it("budget 2: only the first half of a failed chunk is repaired", async () => {
+    const model = stubModel({ 1: "not json" });
+    const last = final(await collect(translateCues(model.createResponse, cues(10), "instr", { maxAttemptsPerChunk: 2 })));
+    expect(model.calls.map((p) => itemsSent(p).length)).toEqual([10, 5]);
+    expect(last.type).toBe("partial");
+    if (last.type !== "partial") return;
+    expect(last.report.untranslated.map((u) => [u.id, u.reason])).toEqual([6, 7, 8, 9, 10].map((id) => [id, "invalid-json"]));
+  });
+
+  it("the budget applies per chunk, not per job", async () => {
+    const model = stubModel({ 1: itemsFor(...Array.from({ length: 59 }, (_, i) => i + 1)), 3: itemsFor(...Array.from({ length: 9 }, (_, i) => i + 61)) });
+    const last = final(await collect(translateCues(model.createResponse, cues(70), "instr", { maxAttemptsPerChunk: 2 })));
+    expect(model.calls.map((p) => itemsSent(p).length)).toEqual([60, 1, 10, 1]);
+    expect(last).toMatchObject({ type: "complete", report: { requests: 4, repairs: 2 } });
+  });
+
+  it("budget 0 sends nothing", async () => {
+    const model = stubModel();
+    const last = final(await collect(translateCues(model.createResponse, cues(2), "instr", { maxAttemptsPerChunk: 0 })));
+    expect(model.calls).toHaveLength(0);
+    expect(last).toMatchObject({ type: "error", report: { requests: 0 } });
   });
 });

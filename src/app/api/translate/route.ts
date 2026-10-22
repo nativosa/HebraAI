@@ -4,7 +4,7 @@ import { createOpenAIClient } from "@/lib/openai-client";
 import { parseSrt } from "@/lib/srt/parse";
 import { removeSoundEffectCues } from "@/lib/srt/sound-effects";
 import { parseTranslateOptions } from "@/lib/translation/options";
-import { type StreamEvent, translateCues } from "@/lib/translation/pipeline";
+import { DEFAULT_MAX_ATTEMPTS_PER_CHUNK, type StreamEvent, translateCues } from "@/lib/translation/pipeline";
 import { buildInstructions } from "@/lib/translation/prompt";
 
 
@@ -15,6 +15,12 @@ const DEFAULT_MAX_FILE_SIZE_BYTES = 512 * 1024; // 0.5 MB
 function getMaxFileSizeBytes(): number {
   const n = Number(process.env.MAX_FILE_SIZE_BYTES);
   return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_FILE_SIZE_BYTES;
+}
+
+// Limit on API requests per 60-cue chunk (first request, repairs, retries).
+function getMaxAttemptsPerChunk(): number {
+  const n = Number(process.env.MAX_ATTEMPTS_PER_CHUNK);
+  return Number.isInteger(n) && n >= 1 && n <= 20 ? n : DEFAULT_MAX_ATTEMPTS_PER_CHUNK;
 }
 
 const client = createOpenAIClient();
@@ -89,7 +95,8 @@ export async function POST(req: Request) {
           parse: { recovered: parsed.recovered, unparsed: parsed.unparsed },
           removedSoundEffectCues: cues.length - filteredCues.length,
         };
-        for await (const event of translateCues((p) => client.responses.create(p), filteredCues, instructions, context)) {
+        const options = { context, maxAttemptsPerChunk: getMaxAttemptsPerChunk() };
+        for await (const event of translateCues((p) => client.responses.create(p), filteredCues, instructions, options)) {
           send(event);
         }
       } catch (error) {

@@ -21,6 +21,7 @@ beforeEach(() => {
   model.current = stubModel();
   vi.stubEnv("OPENAI_API_KEY", "test-key-not-used");
   vi.stubEnv("MAX_FILE_SIZE_BYTES", undefined);
+  vi.stubEnv("MAX_ATTEMPTS_PER_CHUNK", undefined);
   // Any real network access from the route would fail the test.
   vi.stubGlobal("fetch", () => Promise.reject(new Error("network disabled in tests")));
 });
@@ -115,6 +116,8 @@ describe("POST /api/translate: streaming", () => {
         cues: 4,
         translated: 4,
         untranslated: [],
+        requests: 1,
+        repairs: 0,
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -168,24 +171,45 @@ describe("POST /api/translate: incomplete translations", () => {
   const file = () => fixtureFile("multi-chunk.srt"); // 150 cues -> 3 chunks
   const types = (events: { type: string }[]) => events.map((e) => e.type);
 
-  it("invalid JSON in one chunk: all chunks processed, final event partial", async () => {
-    model.current = stubModel({ 2: "not json" });
+  // Chunk 2 = call 2; its two repair halves = calls 3 and 4; chunk 3 = call 5.
+  it("invalid JSON in one chunk and its repairs: all chunks processed, final event partial", async () => {
+    model.current = stubModel({ 2: "not json", 3: "not json", 4: "not json" });
     const res = await post({ ...UI_DEFAULTS, file: file() });
     expect(res.status).toBe(200);
     const events = ndjson(await res.text());
     expect(types(events)).toEqual(["progress", "progress", "progress", "partial"]);
     expect(events.at(-1).report).toMatchObject({ cues: 150, translated: 90 });
     expect(events.at(-1).report.untranslated).toHaveLength(60);
-    expect(model.current.calls).toHaveLength(3);
+    expect(model.current.calls).toHaveLength(5);
   });
 
   it.each(["{}", '{"items":{}}', "null"])("unexpected shape %j: partial, never complete", async (out) => {
-    model.current = stubModel({ 2: out });
+    model.current = stubModel({ 2: out, 3: out, 4: out });
     const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
     expect(events.at(-1).type).toBe("partial");
     expect(new Set(events.at(-1).report.untranslated.map((u: { reason: string }) => u.reason))).toEqual(
       new Set(["invalid-shape"])
     );
+  });
+
+  it("a repaired chunk completes the job", async () => {
+    model.current = stubModel({ 2: "not json" });
+    const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
+    expect(events.at(-1)).toMatchObject({ type: "complete", report: { requests: 5, repairs: 2, translated: 150 } });
+  });
+
+  it("uses MAX_ATTEMPTS_PER_CHUNK", async () => {
+    vi.stubEnv("MAX_ATTEMPTS_PER_CHUNK", "1");
+    model.current = stubModel({ 2: "not json" });
+    const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
+    expect(events.at(-1)).toMatchObject({ type: "partial", report: { requests: 3, repairs: 0 } });
+  });
+
+  it.each(["0", "21", "abc", "2.5"])("ignores invalid MAX_ATTEMPTS_PER_CHUNK %j (default 6)", async (value) => {
+    vi.stubEnv("MAX_ATTEMPTS_PER_CHUNK", value);
+    model.current = stubModel({ 2: "not json" });
+    const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
+    expect(events.at(-1)).toMatchObject({ type: "complete", report: { repairs: 2 } });
   });
 
   it("API error on the first chunk: one error event with the error message", async () => {
