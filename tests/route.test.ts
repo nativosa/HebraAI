@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import { readGolden, readExpected, readSrtFixture } from "./helpers/fixtures";
-import { stubModel } from "./helpers/stub-model";
+import { itemsFor, stubModel } from "./helpers/stub-model";
+import { parseSrt } from "@/lib/srt/parse";
 
 // Test-only replacement of the OpenAI client module: the route's client sends
 // every request to an in-process stub model. Production code is unchanged.
@@ -113,6 +114,7 @@ describe("POST /api/translate: streaming", () => {
       report: {
         cues: 4,
         translated: 4,
+        untranslated: [],
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -162,36 +164,41 @@ describe("POST /api/translate: streaming", () => {
   );
 });
 
-describe("POST /api/translate: malformed model output", () => {
+describe("POST /api/translate: incomplete translations", () => {
   const file = () => fixtureFile("multi-chunk.srt"); // 150 cues -> 3 chunks
+  const types = (events: { type: string }[]) => events.map((e) => e.type);
 
-  it("invalid JSON: progress so far, one error event with details, no completion", async () => {
+  it("invalid JSON in one chunk: all chunks processed, final event partial", async () => {
     model.current = stubModel({ 2: "not json" });
     const res = await post({ ...UI_DEFAULTS, file: file() });
     expect(res.status).toBe(200);
-    expect(ndjson(await res.text())).toEqual([
-      { type: "progress", progress: 33, currentChunk: 1, totalChunks: 3 },
-      { type: "error", message: "Model returned invalid JSON (unexpected).", details: "not json" },
-    ]);
-    expect(model.current.calls).toHaveLength(2);
+    const events = ndjson(await res.text());
+    expect(types(events)).toEqual(["progress", "progress", "progress", "partial"]);
+    expect(events.at(-1).report).toMatchObject({ cues: 150, translated: 90 });
+    expect(events.at(-1).report.untranslated).toHaveLength(60);
+    expect(model.current.calls).toHaveLength(3);
   });
 
-  it.each(["{}", '{"items":{}}', "null"])(
-    "unexpected shape %j: one error event with a message, no completion",
-    async (out) => {
-      model.current = stubModel({ 2: out });
-      const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
-      expect(events.map((e) => e.type)).toEqual(["progress", "error"]);
-      expect(Object.keys(events[1])).toEqual(["type", "message"]);
-      expect(typeof events[1].message).toBe("string");
-      expect(events[1].message.length).toBeGreaterThan(0);
-      expect(model.current.calls).toHaveLength(2);
-    }
-  );
+  it.each(["{}", '{"items":{}}', "null"])("unexpected shape %j: partial, never complete", async (out) => {
+    model.current = stubModel({ 2: out });
+    const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
+    expect(events.at(-1).type).toBe("partial");
+    expect(new Set(events.at(-1).report.untranslated.map((u: { reason: string }) => u.reason))).toEqual(
+      new Set(["invalid-shape"])
+    );
+  });
 
-  it("API error: one error event with the error message, no completion", async () => {
+  it("API error on the first chunk: one error event with the error message", async () => {
     model.current = stubModel({ 1: new Error("429 Rate limit") });
     const events = ndjson(await (await post({ ...UI_DEFAULTS, file: file() })).text());
-    expect(events).toEqual([{ type: "error", message: "429 Rate limit" }]);
+    expect(types(events)).toEqual(["error"]);
+    expect(events[0]).toMatchObject({ type: "error", message: "429 Rate limit", report: { translated: 0 } });
+  });
+
+  it("never sends cue text in the report", async () => {
+    model.current = stubModel({ 1: itemsFor() });
+    const events = ndjson(await (await post({ ...UI_DEFAULTS, file: fixtureFile("basic.srt") })).text());
+    const report = JSON.stringify(events.at(-1).report);
+    for (const c of parseSrt(readSrtFixture("basic.srt")).cues) expect(report).not.toContain(c.text);
   });
 });

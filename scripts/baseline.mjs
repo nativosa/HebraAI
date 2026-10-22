@@ -21,7 +21,8 @@
 //        references (fixtures/legacy-baseline/, fixtures/legacy-requests.json):
 //        a difference is allowed only if fixtures/expected/changes.json lists
 //        the case with its reason (defect id); unlisted or stale entries fail;
-//      - guard checks (e.g. the default file-size cap).
+//      - guard checks (e.g. the default file-size cap) and the reliability
+//        scenarios in scripts/scenarios.mjs (scripted fake-server faults).
 //      capture: writes fixtures/expected/ (refuses without --overwrite). The
 //      legacy references are never written.
 //
@@ -34,6 +35,7 @@ import { startFakeOpenAI } from "./fake-openai.mjs";
 import { inspectSrt, compareStructure } from "./srt-structure.mjs";
 import { buildFingerprintFile, changedCases, compareFingerprints } from "./request-fingerprint.mjs";
 import { reviewLegacyDiffs } from "./legacy-diff.mjs";
+import { SCENARIOS } from "./scenarios.mjs";
 import {
   ROOT,
   FIXTURES,
@@ -110,6 +112,30 @@ async function runGuards() {
   return failures;
 }
 
+// Runs each scripted fault scenario: the fake server's answers are scripted
+// per request of the scenario (1-based); the echo is restored afterwards.
+async function runScenarios(fake) {
+  const failures = [];
+  for (const s of SCENARIOS) {
+    let count = 0;
+    fake.setResponder((body, n) => s.responder(body, n, ++count));
+    const before = fake.requests.length;
+    let problem;
+    try {
+      const { body } = await postFixture(PORT, s.fixture, { ...UI_DEFAULT_FIELDS, removeSoundEffects: "false" });
+      const events = body.split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
+      problem = s.check(events, fake.requests.length - before);
+    } catch (err) {
+      problem = err?.message ?? String(err);
+    } finally {
+      fake.setResponder(null);
+    }
+    console.log(`${problem ? "FAIL" : "PASS"}  scenario: ${s.name}${problem ? ` — ${problem}` : ""}`);
+    if (problem) failures.push(s.name);
+  }
+  return failures;
+}
+
 // Compares results with the immutable legacy references; every difference
 // must be explained in changes.json and every explanation must still apply.
 function checkAgainstLegacy(results, fingerprints, changes) {
@@ -169,7 +195,7 @@ async function main() {
     for (const { name, fields } of PROMPT_VARIANTS) {
       await recordRequests(fake, requestsByCase, `prompt.${name}`, () => postFixture(PORT, "basic.srt", fields));
     }
-    if (mode === "check") guardFailures = await runGuards();
+    if (mode === "check") guardFailures = [...(await runGuards()), ...(await runScenarios(fake))];
   } finally {
     stopApp(child);
     await fake.close();
@@ -238,7 +264,7 @@ async function main() {
   console.log(
     failures
       ? `\n${failures} failure(s)`
-      : `\nAll ${results.length} cases match fixtures/expected/; request fingerprints, legacy differences and guard checks pass.`
+      : `\nAll ${results.length} cases match fixtures/expected/; request fingerprints, legacy differences, guard checks and scenarios pass.`
   );
   return failures ? 1 : 0;
 }

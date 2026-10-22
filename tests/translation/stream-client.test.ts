@@ -27,7 +27,7 @@ describe("readTranslationStream", () => {
       ),
       { onProgress: (p) => progress.push(p) }
     );
-    expect(out).toEqual({ content: "1\nA\n", report: undefined });
+    expect(out).toEqual({ content: "1\nA\n", report: undefined, partial: false });
     expect(progress).toEqual([50, 100, 100]);
   });
 
@@ -59,11 +59,28 @@ describe("readTranslationStream", () => {
   });
 
   it("returns the report of the complete event", async () => {
-    const report = { cues: 1, translated: 1, removedSoundEffectCues: 0, parse: { recovered: [], unparsed: [] } };
+    const report = { cues: 1, translated: 1, untranslated: [], removedSoundEffectCues: 0, parse: { recovered: [], unparsed: [] } };
     expect(await readTranslationStream(streamed(line({ type: "complete", content: "x", report })))).toEqual({
       content: "x",
       report,
+      partial: false,
     });
+  });
+
+  it("returns a partial result marked as partial", async () => {
+    const report = {
+      cues: 2,
+      translated: 1,
+      untranslated: [{ id: 2, number: 2, start: "00:00:01,000", end: "00:00:02,000", reason: "missing" }],
+      removedSoundEffectCues: 0,
+      parse: { recovered: [], unparsed: [] },
+    };
+    const progress: number[] = [];
+    const out = await readTranslationStream(streamed(line({ type: "partial", content: "x", report })), {
+      onProgress: (p) => progress.push(p),
+    });
+    expect(out).toEqual({ content: "x", report, partial: true });
+    expect(progress).toEqual([100]);
   });
 
   it("throws the message of an error event", async () => {

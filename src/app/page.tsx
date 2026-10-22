@@ -8,7 +8,7 @@ import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
-import { describeParseReport } from "@/lib/translation/report";
+import { describeParseReport, describePartial, type PartialSummary } from "@/lib/translation/report";
 import { readTranslationStream } from "@/lib/translation/stream-client";
 import type { Settings } from "@/lib/types";
 
@@ -20,6 +20,7 @@ export default function Home() {
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [notices, setNotices] = useState<string[]>([]);
+  const [partial, setPartial] = useState<PartialSummary | null>(null);
 
   const [settings, setSettings] = useState<Settings>({
     tone: "Neutral",
@@ -63,6 +64,7 @@ export default function Home() {
   function onFileSelected(f: File | null) {
     setError(null);
     setNotices([]);
+    setPartial(null);
     setProgress(0);
     setPreviewEn("");
     setPreviewHe("");
@@ -93,6 +95,9 @@ export default function Home() {
     setBusy(true);
     setError(null);
     setNotices([]);
+    setPartial(null);
+    setPreviewHe("");
+    setTranslatedSrt("");
     setProgress(5);
 
     try {
@@ -120,6 +125,7 @@ export default function Home() {
       setPreviewHe(result.content);
       setTranslatedSrt(result.content);
       setNotices(result.report ? describeParseReport(result.report.parse) : []);
+      setPartial(result.partial && result.report ? describePartial(result.report) : null);
     } catch (err) {
       setError(errorMessage(err));
       setProgress(0);
@@ -177,6 +183,7 @@ export default function Home() {
                   progress={progress}
                   error={error}
                   notices={notices}
+                  partial={partial}
                   onTranslate={onTranslate}
                 />
               </div>
@@ -195,8 +202,9 @@ export default function Home() {
                 canCopy={!!previewHe}
                 onCopy={() => navigator.clipboard.writeText(previewHe || "")}
                 canDownload={!!translatedSrt}
+                downloadLabel={partial ? "Download Partial SRT" : "Download SRT"}
                 onDownload={() =>
-                  downloadTextAsFile(translatedSrt, "translated.he.srt")
+                  downloadTextAsFile(translatedSrt, partial ? "translated.he.PARTIAL.srt" : "translated.he.srt")
                 }
               />
 

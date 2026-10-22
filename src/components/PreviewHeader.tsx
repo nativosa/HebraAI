@@ -6,6 +6,7 @@ type Props = {
   canCopy: boolean;
   onCopy: () => void;
   canDownload: boolean;
+  downloadLabel: string;
   onDownload: () => void;
 };
 
@@ -15,6 +16,7 @@ export default function PreviewHeader({
   canCopy,
   onCopy,
   canDownload,
+  downloadLabel,
   onDownload,
 }: Props) {
   return (
@@ -49,7 +51,7 @@ export default function PreviewHeader({
           onClick={onDownload}
           className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
         >
-          Download SRT
+          {downloadLabel}
         </button>
       </div>
     </div>

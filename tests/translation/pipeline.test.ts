@@ -4,7 +4,7 @@ import { CHUNK_SIZE, chunk, translateCues, type StreamEvent } from "@/lib/transl
 import { buildChunkRequest } from "@/lib/translation/prompt";
 import { cue, cues } from "../helpers/cues";
 import { readGolden, readExpected, readSrtFixture } from "../helpers/fixtures";
-import { itemsSent, stubModel } from "../helpers/stub-model";
+import { incompleteResponse, itemsFor, itemsSent, refusalResponse, stubModel } from "../helpers/stub-model";
 
 const golden = readGolden();
 
@@ -130,49 +130,80 @@ describe("translateCues: output order and report", () => {
   });
 });
 
-describe("translateCues: malformed model output", () => {
-  it("invalid JSON in chunk 2 -> one progress event, an error event, then stops", async () => {
+describe("translateCues: validation and partial results", () => {
+  const final = (events: StreamEvent[]) => events.at(-1)!;
+
+  it("complete only when every cue is translated", async () => {
+    const events = await collect(translateCues(stubModel().createResponse, cues(3), "instr"));
+    expect(final(events)).toMatchObject({ type: "complete", report: { cues: 3, translated: 3, untranslated: [] } });
+  });
+
+  it("D12 (fixed): a missing item makes the result partial; that cue keeps its English text", async () => {
+    const events = await collect(translateCues(stubModel({ 1: itemsFor(1, 3) }).createResponse, cues(3), "instr"));
+    expect(final(events)).toEqual({
+      type: "partial",
+      content:
+        "1\n00:00:01,000 --> 00:00:02,000\nHE1\n\n" +
+        "2\n00:00:01,000 --> 00:00:02,000\nLine 2\n\n" +
+        "3\n00:00:01,000 --> 00:00:02,000\nHE3\n",
+      report: {
+        cues: 3,
+        translated: 2,
+        untranslated: [{ id: 2, number: 2, start: "00:00:01,000", end: "00:00:02,000", reason: "missing" }],
+        removedSoundEffectCues: 0,
+        parse: { recovered: [], unparsed: [] },
+      },
+    });
+  });
+
+  it("an invalid chunk does not stop later chunks", async () => {
     const model = stubModel({ 2: "Sorry, I can't do that." });
     const events = await collect(translateCues(model.createResponse, cues(150), "instr"));
-    expect(events).toEqual([
-      { type: "progress", progress: 33, currentChunk: 1, totalChunks: 3 },
-      { type: "error", message: "Model returned invalid JSON (unexpected).", details: "Sorry, I can't do that." },
-    ]);
+    expect(events.filter((e) => e.type === "progress").map((e) => e.progress)).toEqual([33, 67, 100]);
+    const last = final(events);
+    expect(last.type).toBe("partial");
+    if (last.type !== "partial") return;
+    expect(last.report.translated).toBe(90);
+    expect(last.report.untranslated.map((u) => u.id)).toEqual(cues(150).slice(60, 120).map((c) => c.id));
+    expect(new Set(last.report.untranslated.map((u) => u.reason))).toEqual(new Set(["invalid-json"]));
+    expect(model.calls).toHaveLength(3);
+  });
+
+  it("refusal and content filter mark cues untranslated with the reason", async () => {
+    const model = stubModel({ 1: refusalResponse, 2: incompleteResponse("content_filter") });
+    const last = final(await collect(translateCues(model.createResponse, cues(130), "instr")));
+    expect(last.type).toBe("partial");
+    if (last.type !== "partial") return;
+    const reasons = last.report.untranslated.map((u) => u.reason);
+    expect(reasons.filter((r) => r === "refusal")).toHaveLength(60);
+    expect(reasons.filter((r) => r === "content-filter")).toHaveLength(60);
+    expect(last.report.translated).toBe(10);
+  });
+
+  it("error, with the report, when nothing was translated", async () => {
+    const last = final(await collect(translateCues(stubModel({ 1: refusalResponse }).createResponse, cues(2), "instr")));
+    expect(last).toMatchObject({
+      type: "error",
+      message: "No cues were translated: the model refused.",
+      report: { cues: 2, translated: 0 },
+    });
+  });
+
+  it("an API error stops the job and keeps the chunks already translated", async () => {
+    const model = stubModel({ 2: new Error("429 Rate limit") });
+    const events = await collect(translateCues(model.createResponse, cues(150), "instr"));
+    expect(events.filter((e) => e.type === "progress")).toHaveLength(1);
+    const last = final(events);
+    expect(last.type).toBe("partial");
+    if (last.type !== "partial") return;
+    expect(last.report).toMatchObject({ translated: 60, failure: "429 Rate limit" });
+    expect(last.report.untranslated).toHaveLength(90);
+    expect(new Set(last.report.untranslated.map((u) => u.reason))).toEqual(new Set(["request-failed"]));
     expect(model.calls).toHaveLength(2);
   });
 
-  it("truncates details to the first 500 characters", async () => {
-    const events = await collect(translateCues(stubModel({ 1: "x".repeat(600) }).createResponse, cues(1), "instr"));
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ type: "error", details: "x".repeat(500) });
-  });
-
-  it("omits details when the output text is missing", async () => {
-    const events = await collect(translateCues(stubModel({ 1: undefined }).createResponse, cues(1), "instr"));
-    expect(lines(events)).toEqual(['{"type":"error","message":"Model returned invalid JSON (unexpected)."}']);
-  });
-
-  it.each([
-    ["no items", "{}"],
-    ["items not an array", '{"items":{}}'],
-    ["null", "null"],
-  ])("valid JSON with an unexpected shape (%s) throws after earlier progress, and stops", async (_label, out) => {
-    const model = stubModel({ 2: out });
-    const events: StreamEvent[] = [];
-    await expect(async () => {
-      for await (const e of translateCues(model.createResponse, cues(150), "instr")) events.push(e);
-    }).rejects.toThrow(TypeError);
-    expect(events).toEqual([{ type: "progress", progress: 33, currentChunk: 1, totalChunks: 3 }]);
-    expect(model.calls).toHaveLength(2);
-  });
-
-  it("propagates an API error and stops", async () => {
-    const model = stubModel({ 1: new Error("429 Rate limit") });
-    const events: StreamEvent[] = [];
-    await expect(async () => {
-      for await (const e of translateCues(model.createResponse, cues(150), "instr")) events.push(e);
-    }).rejects.toThrow("429 Rate limit");
-    expect(events).toEqual([]);
-    expect(model.calls).toHaveLength(1);
+  it("an API error on the first chunk is an error event with its message", async () => {
+    const last = final(await collect(translateCues(stubModel({ 1: new Error("401 Unauthorized") }).createResponse, cues(2), "instr")));
+    expect(last).toMatchObject({ type: "error", message: "401 Unauthorized", report: { translated: 0 } });
   });
 });

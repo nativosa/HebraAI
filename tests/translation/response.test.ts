@@ -1,94 +1,111 @@
 import { describe, expect, it } from "vitest";
-import { applyChunkTranslation, parseChunkOutput, type ChunkTranslation } from "@/lib/translation/response";
+import { REPAIRABLE, validateChunkResponse, type ModelResponse } from "@/lib/translation/response";
 import { cue } from "../helpers/cues";
+import { incompleteResponse, refusalResponse } from "../helpers/stub-model";
 
-describe("parseChunkOutput", () => {
-  it("parses valid JSON", () => {
-    expect(parseChunkOutput('{"items":[{"index":1,"text_he":"שלום"}]}')).toEqual({
-      ok: true,
-      json: { items: [{ index: 1, text_he: "שלום" }] },
+const two = [cue(1, "Hello"), cue(2, "Bye")];
+const out = (output_text: string): ModelResponse => ({ output_text, status: "completed" });
+const items = (...it: (object | null)[]) => out(JSON.stringify({ items: it }));
+
+function check(cues: ReturnType<typeof cue>[], response: ModelResponse) {
+  const r = validateChunkResponse(cues, response);
+  return { translations: Object.fromEntries(r.translations), failed: Object.fromEntries(r.failed), unexpected: r.unexpectedItems };
+}
+
+describe("validateChunkResponse: complete answers", () => {
+  it("maps translations by id, in any item order, trimmed", () => {
+    expect(check(two, items({ index: 2, text_he: " ביי " }, { index: 1, text_he: "שלום\n" }))).toEqual({
+      translations: { 1: "שלום", 2: "ביי" },
+      failed: {},
+      unexpected: 0,
     });
   });
 
-  it.each(["", "not json", '{"items":[', "```json\n{}\n```"])("rejects invalid JSON %j", (out) => {
-    expect(parseChunkOutput(out)).toEqual({ ok: false });
+  it("accepts names, Latin text and text identical to the source", () => {
+    const cues = [cue(1, "OK"), cue(2, "FBI"), cue(3, "Netflix and chill")];
+    const r = check(cues, items({ index: 1, text_he: "OK" }, { index: 2, text_he: "FBI" }, { index: 3, text_he: "Netflix וצ׳יל" }));
+    expect(r.failed).toEqual({});
+    expect(Object.keys(r.translations)).toHaveLength(3);
   });
 
-  // Legacy: only JSON syntax is checked; the shape is not validated here.
-  it("accepts valid JSON of any shape", () => {
-    expect(parseChunkOutput("null")).toEqual({ ok: true, json: null });
-    expect(parseChunkOutput("{}")).toEqual({ ok: true, json: {} });
-  });
-});
-
-describe("applyChunkTranslation", () => {
-  it("replaces each cue's text by index, keeping timing and cue order", () => {
-    const cues = [cue(1, "Hello"), cue(2, "Bye")];
-    const out = applyChunkTranslation(cues, {
-      items: [
-        { index: 2, text_he: "ביי" },
-        { index: 1, text_he: "שלום" },
-      ],
-    });
-    expect(out).toEqual([cue(1, "שלום"), cue(2, "ביי")]);
+  it("accepts an exact duplicate item", () => {
+    expect(check([cue(1, "Hi")], items({ index: 1, text_he: "היי" }, { index: 1, text_he: "היי " })).failed).toEqual({});
   });
 
-  it("trims translated text", () => {
-    expect(applyChunkTranslation([cue(1, "Hi")], { items: [{ index: 1, text_he: "  היי \n" }] })).toEqual([cue(1, "היי")]);
-  });
-
-  it("LEGACY D12: a cue without a translation silently keeps its English text", () => {
-    expect(applyChunkTranslation([cue(1, "Hi"), cue(2, " Bye ")], { items: [{ index: 1, text_he: "היי" }] })).toEqual([
-      cue(1, "היי"),
-      cue(2, "Bye"),
-    ]);
-  });
-
-  it("keeps an empty translation instead of falling back", () => {
-    expect(applyChunkTranslation([cue(1, "Hi")], { items: [{ index: 1, text_he: "" }] })).toEqual([cue(1, "")]);
-  });
-
-  it("ignores items for unknown indices and uses the last duplicate item", () => {
-    const json = {
-      items: [
-        { index: 1, text_he: "first" },
-        { index: 9, text_he: "unknown" },
-        { index: 1, text_he: "last" },
-      ],
-    };
-    expect(applyChunkTranslation([cue(1, "Hi")], json)).toEqual([cue(1, "last")]);
-  });
-
-  it("does not match a string index to a numeric cue index", () => {
-    const json = { items: [{ index: "1", text_he: "היי" }] } as unknown as ChunkTranslation;
-    expect(applyChunkTranslation([cue(1, "Hi")], json)).toEqual([cue(1, "Hi")]);
+  it("accepts a response without status (treated as completed)", () => {
+    expect(check([cue(1, "Hi")], { output_text: JSON.stringify({ items: [{ index: 1, text_he: "היי" }] }) }).failed).toEqual({});
   });
 
   it("D1 (fixed): cues sharing an SRT number are matched by id", () => {
-    const json = {
-      items: [
-        { index: 2, text_he: "A" },
-        { index: 3, text_he: "B" },
-      ],
-    };
-    const input = [cue(2, "a", { number: 2 }), cue(3, "b", { number: 2 })];
-    expect(applyChunkTranslation(input, json)).toEqual([cue(2, "A", { number: 2 }), cue(3, "B", { number: 2 })]);
+    const cues = [cue(2, "a", { number: 2 }), cue(3, "b", { number: 2 })];
+    expect(check(cues, items({ index: 2, text_he: "A" }, { index: 3, text_he: "B" })).translations).toEqual({ 2: "A", 3: "B" });
+  });
+});
+
+describe("validateChunkResponse: per-cue problems", () => {
+  it("D12 (fixed): a missing item is reported, not filled with English", () => {
+    expect(check(two, items({ index: 1, text_he: "שלום" }))).toEqual({
+      translations: { 1: "שלום" },
+      failed: { 2: "missing" },
+      unexpected: 0,
+    });
   });
 
-  // Malformed shapes are not validated (Stage 2 adds application errors);
-  // they fail with a TypeError that the route reports as an error event.
+  it("conflicting duplicate items fail that cue", () => {
+    expect(check(two, items({ index: 1, text_he: "A" }, { index: 1, text_he: "B" }, { index: 2, text_he: "C" })).failed).toEqual({
+      1: "duplicate",
+    });
+  });
+
+  it("an empty translation of non-empty text fails that cue", () => {
+    expect(check(two, items({ index: 1, text_he: "  " }, { index: 2, text_he: "C" })).failed).toEqual({ 1: "empty" });
+  });
+
+  it("ignores and counts items for unknown ids or with a wrong type", () => {
+    const r = check(
+      two,
+      items(
+        { index: 1, text_he: "A" },
+        { index: 2, text_he: "B" },
+        { index: 9, text_he: "x" },
+        { index: "1", text_he: "x" },
+        { index: 1.5, text_he: "x" },
+        { index: 1, text_he: 5 },
+        null
+      )
+    );
+    expect(r).toEqual({ translations: { 1: "A", 2: "B" }, failed: {}, unexpected: 5 });
+  });
+});
+
+describe("validateChunkResponse: whole-chunk problems", () => {
   it.each([
-    ["null", null],
-    ["no items", {}],
-    ["items not an array", { items: {} }],
-    ["null item", { items: [null] }],
-  ])("throws a TypeError for %s", (_label, json) => {
-    expect(() => applyChunkTranslation([cue(1, "Hi")], json as unknown as ChunkTranslation)).toThrow(TypeError);
+    ["invalid JSON", out("Sorry, I can't do that."), "invalid-json"],
+    ["truncated JSON", out('{"items":[{"index":1'), "invalid-json"],
+    ["null", out("null"), "invalid-shape"],
+    ["no items", out("{}"), "invalid-shape"],
+    ["items not an array", out('{"items":{}}'), "invalid-shape"],
+    ["incomplete (max_output_tokens)", incompleteResponse("max_output_tokens"), "incomplete"],
+    ["failed status", { output_text: "", status: "failed" }, "incomplete"],
+    ["content filter", incompleteResponse("content_filter"), "content-filter"],
+    ["refusal", refusalResponse, "refusal"],
+  ] as const)("%s -> every cue %s", (_label, response, reason) => {
+    expect(check(two, response as ModelResponse)).toEqual({
+      translations: {},
+      failed: { 1: reason, 2: reason },
+      unexpected: 0,
+    });
   });
 
-  it("does not modify the input cues", () => {
-    const cues = [cue(1, "Hi")];
-    applyChunkTranslation(cues, { items: [{ index: 1, text_he: "היי" }] });
-    expect(cues).toEqual([cue(1, "Hi")]);
+  it("a refusal wins even when the text looks valid", () => {
+    const r = { ...refusalResponse, output_text: JSON.stringify({ items: [{ index: 1, text_he: "x" }] }) };
+    expect(check([cue(1, "Hi")], r).failed).toEqual({ 1: "refusal" });
+  });
+});
+
+describe("REPAIRABLE", () => {
+  it("covers technical and structural failures only", () => {
+    expect([...REPAIRABLE].sort()).toEqual(["duplicate", "empty", "incomplete", "invalid-json", "invalid-shape", "missing"]);
+    for (const r of ["refusal", "content-filter", "request-failed"] as const) expect(REPAIRABLE.has(r)).toBe(false);
   });
 });

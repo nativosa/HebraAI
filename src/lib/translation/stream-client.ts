@@ -2,7 +2,8 @@
 
 import type { TranslationReport } from "./report";
 
-export type TranslationResult = { content: string; report?: TranslationReport };
+// partial: some cues could not be translated and are kept in English.
+export type TranslationResult = { content: string; report?: TranslationReport; partial: boolean };
 
 export type StreamHandlers = {
   onProgress?: (progress: number) => void;
@@ -30,8 +31,8 @@ export async function readTranslationStream(res: Response, handlers: StreamHandl
     }
     if (msg.type === "progress" && !trailing) {
       handlers.onProgress?.(msg.progress);
-    } else if (msg.type === "complete") {
-      result = { content: msg.content, report: msg.report };
+    } else if (msg.type === "complete" || msg.type === "partial") {
+      result = { content: msg.content, report: msg.report, partial: msg.type === "partial" };
       handlers.onProgress?.(100);
     } else if (msg.type === "error") {
       throw new Error(msg.message || "Unknown error");
