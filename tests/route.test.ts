@@ -118,6 +118,7 @@ describe("POST /api/translate: streaming", () => {
         untranslated: [],
         requests: 1,
         repairs: 0,
+        retries: 0,
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },

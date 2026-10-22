@@ -37,6 +37,11 @@ export function resolveOpenAIOptions(env: Env = process.env): { apiKey?: string;
   return { apiKey, baseURL: url.href };
 }
 
+// Per-attempt request timeout. The SDK's own retries are off: the translation
+// pipeline retries temporary failures itself (src/lib/translation/retry.ts)
+// within its per-chunk request budget.
+export const REQUEST_TIMEOUT_MS = 120_000;
+
 export function createOpenAIClient(env: Env = process.env): OpenAI {
-  return new OpenAI(resolveOpenAIOptions(env));
+  return new OpenAI({ ...resolveOpenAIOptions(env), maxRetries: 0, timeout: REQUEST_TIMEOUT_MS });
 }

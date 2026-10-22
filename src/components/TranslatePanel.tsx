@@ -8,6 +8,8 @@ type Props = {
   error: string | null;
   // Notes about the input file (recovered or unparsed content).
   notices: string[];
+  // Shown while busy, e.g. a retry after a temporary error.
+  status: string | null;
   // Set when the result is partial.
   partial: PartialSummary | null;
   onTranslate: () => void;
@@ -19,6 +21,7 @@ export default function TranslatePanel({
   progress,
   error,
   notices,
+  status,
   partial,
   onTranslate,
 }: Props) {
@@ -44,7 +47,7 @@ export default function TranslatePanel({
         </div>
         <div className="mt-2 text-xs text-slate-500">
           {busy
-            ? "Working…"
+            ? status ?? "Working…"
             : partial
             ? "Partial result. Review the preview, then click Download Partial SRT."
             : progress === 100

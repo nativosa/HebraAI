@@ -21,6 +21,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [notices, setNotices] = useState<string[]>([]);
   const [partial, setPartial] = useState<PartialSummary | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<Settings>({
     tone: "Neutral",
@@ -96,6 +97,7 @@ export default function Home() {
     setError(null);
     setNotices([]);
     setPartial(null);
+    setStatus(null);
     setPreviewHe("");
     setTranslatedSrt("");
     setProgress(5);
@@ -120,7 +122,16 @@ export default function Home() {
       }
 
       // Handle streaming response
-      const result = await readTranslationStream(res, { onProgress: setProgress });
+      const result = await readTranslationStream(res, {
+        onProgress: (p) => {
+          setProgress(p);
+          setStatus(null);
+        },
+        onRetry: (r) =>
+          setStatus(
+            `Temporary problem (${r.reason}) on chunk ${r.chunk}. Retrying in ${Math.ceil(r.delayMs / 1000)} s (retry ${r.attempt})…`
+          ),
+      });
 
       setPreviewHe(result.content);
       setTranslatedSrt(result.content);
@@ -130,6 +141,7 @@ export default function Home() {
       setError(errorMessage(err));
       setProgress(0);
     } finally {
+      setStatus(null);
       setBusy(false);
     }
   }
@@ -183,6 +195,7 @@ export default function Home() {
                   progress={progress}
                   error={error}
                   notices={notices}
+                  status={status}
                   partial={partial}
                   onTranslate={onTranslate}
                 />

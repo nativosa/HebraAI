@@ -73,4 +73,66 @@ export const SCENARIOS = [
       return requests === 5 ? null : `${requests} requests`;
     },
   },
+  {
+    name: "429 twice (retry-after-ms) -> retried, complete",
+    fixture: "basic.srt",
+    responder: (body, n, nInCase) => (nInCase <= 2 ? { status: 429, headers: { "retry-after-ms": "5" } } : undefined),
+    check: (events, requests) => {
+      const f = finalEvent(events);
+      if (f.type !== "complete") return `final event ${f.type}`;
+      if (events.filter((e) => e.type === "retry").length !== 2 || f.report.retries !== 2) return `retries ${f.report.retries}`;
+      return requests === 3 ? null : `${requests} requests`;
+    },
+  },
+  {
+    name: "503 once without retry-after -> retried after backoff, complete",
+    fixture: "basic.srt",
+    responder: (body, n, nInCase) => (nInCase === 1 ? { status: 503 } : undefined),
+    check: (events, requests) => {
+      const f = finalEvent(events);
+      if (f.type !== "complete") return `final event ${f.type}`;
+      return requests === 2 && f.report.retries === 1 ? null : `${requests} requests, ${f.report.retries} retries`;
+    },
+  },
+  {
+    name: "persistent 500 -> 3 retries, then error",
+    fixture: "basic.srt",
+    responder: () => ({ status: 500, headers: { "retry-after-ms": "5" } }),
+    check: (events, requests) => {
+      const f = finalEvent(events);
+      if (f.type !== "error") return `final event ${f.type}`;
+      return requests === 4 ? null : `${requests} requests`;
+    },
+  },
+  {
+    name: "400 -> not retried, error",
+    fixture: "basic.srt",
+    responder: () => ({ status: 400, error: "bad request" }),
+    check: (events, requests) => {
+      const f = finalEvent(events);
+      if (f.type !== "error") return `final event ${f.type}`;
+      return requests === 1 ? null : `${requests} requests`;
+    },
+  },
+  {
+    name: "429 insufficient_quota -> not retried, error",
+    fixture: "basic.srt",
+    responder: () => ({ status: 429, code: "insufficient_quota", error: "quota", headers: { "retry-after-ms": "5" } }),
+    check: (events, requests) => {
+      const f = finalEvent(events);
+      if (f.type !== "error") return `final event ${f.type}`;
+      return requests === 1 ? null : `${requests} requests`;
+    },
+  },
+  {
+    name: "chunk 2 of 3 fails permanently -> partial, chunk 1 kept, chunk 3 not sent",
+    fixture: "multi-chunk.srt",
+    responder: (body, n, nInCase) => (nInCase === 2 ? { status: 401, error: "unauthorized" } : undefined),
+    check: (events, requests) => {
+      const f = finalEvent(events);
+      if (f.type !== "partial") return `final event ${f.type}`;
+      if (f.report.translated !== 60 || !f.report.failure) return `translated ${f.report.translated}`;
+      return requests === 2 ? null : `${requests} requests`;
+    },
+  },
 ];

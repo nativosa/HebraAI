@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { APIError } from "openai";
 import { parseSrt } from "@/lib/srt/parse";
 import { CHUNK_SIZE, DEFAULT_MAX_ATTEMPTS_PER_CHUNK, chunk, translateCues, type StreamEvent } from "@/lib/translation/pipeline";
 import { buildChunkRequest } from "@/lib/translation/prompt";
@@ -153,6 +154,7 @@ describe("translateCues: validation and partial results", () => {
         untranslated: [{ id: 2, number: 2, start: "00:00:01,000", end: "00:00:02,000", reason: "missing" }],
         requests: 2,
         repairs: 1,
+        retries: 0,
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -296,5 +298,75 @@ describe("translateCues: per-chunk request budget", () => {
     const last = final(await collect(translateCues(model.createResponse, cues(2), "instr", { maxAttemptsPerChunk: 0 })));
     expect(model.calls).toHaveLength(0);
     expect(last).toMatchObject({ type: "error", report: { requests: 0 } });
+  });
+});
+
+describe("translateCues: retries after temporary errors", () => {
+  const apiError = (status: number, code?: string) =>
+    APIError.generate(status, { error: { message: `HTTP ${status}`, code } }, undefined, new Headers());
+  const run = async (outputs: Parameters<typeof stubModel>[0], n = 3, maxAttemptsPerChunk?: number) => {
+    const model = stubModel(outputs);
+    const slept: number[] = [];
+    const events = await collect(
+      translateCues(model.createResponse, cues(n), "instr", {
+        maxAttemptsPerChunk,
+        sleep: async (ms) => void slept.push(ms),
+        random: () => 0.5,
+      })
+    );
+    return { model, events, slept, last: events.at(-1)! };
+  };
+
+  it("retries 429 and 5xx with backoff, emitting a retry event before each wait", async () => {
+    const { events, slept, last, model } = await run({ 1: apiError(429), 2: apiError(503) });
+    expect(events.map((e) => e.type)).toEqual(["retry", "retry", "progress", "complete"]);
+    expect(events.slice(0, 2)).toEqual([
+      { type: "retry", chunk: 1, attempt: 1, delayMs: 1000, reason: "HTTP 429" },
+      { type: "retry", chunk: 1, attempt: 2, delayMs: 2000, reason: "HTTP 503" },
+    ]);
+    expect(slept).toEqual([1000, 2000]);
+    expect(model.calls).toHaveLength(3);
+    expect(last).toMatchObject({ type: "complete", report: { requests: 3, retries: 2 } });
+  });
+
+  it("retries a request at most 3 times, then stops the job", async () => {
+    const { last, model } = await run({ 1: apiError(500), 2: apiError(500), 3: apiError(500), 4: apiError(500) });
+    expect(model.calls).toHaveLength(4);
+    expect(last).toMatchObject({ type: "error", message: "500 HTTP 500", report: { requests: 4, retries: 3 } });
+  });
+
+  it.each([
+    ["HTTP 400", apiError(400)],
+    ["HTTP 401", apiError(401)],
+    ["quota exceeded", apiError(429, "insufficient_quota")],
+  ])("%s is not retried", async (_label, error) => {
+    const { model, slept, last } = await run({ 1: error });
+    expect(model.calls).toHaveLength(1);
+    expect(slept).toEqual([]);
+    expect(last).toMatchObject({ type: "error", report: { retries: 0 } });
+  });
+
+  it("retries count against the chunk's request budget", async () => {
+    const { model, last } = await run({ 1: apiError(503), 2: apiError(503), 3: apiError(503) }, 3, 2);
+    expect(model.calls).toHaveLength(2);
+    expect(last).toMatchObject({ type: "error", report: { requests: 2, retries: 1 } });
+  });
+
+  it("retries and repairs share the budget: no repair once it is spent", async () => {
+    const { model, last } = await run({ 1: apiError(500), 2: apiError(500), 3: itemsFor(1, 2) }, 3, 3);
+    expect(model.calls).toHaveLength(3);
+    expect(last).toMatchObject({ type: "partial", report: { requests: 3, retries: 2, repairs: 0 } });
+  });
+
+  it("a repair request is retried too", async () => {
+    const { model, last } = await run({ 1: itemsFor(1, 2), 2: apiError(502) });
+    expect(model.calls.map((p) => itemsSent(p).length)).toEqual([3, 1, 1]);
+    expect(last).toMatchObject({ type: "complete", report: { requests: 3, repairs: 1, retries: 1 } });
+  });
+
+  it("a failure in chunk 2 after retries keeps chunk 1", async () => {
+    const { last, model } = await run({ 2: apiError(500), 3: apiError(500), 4: apiError(500), 5: apiError(500) }, 70);
+    expect(model.calls).toHaveLength(5);
+    expect(last).toMatchObject({ type: "partial", report: { translated: 60, failure: "500 HTTP 500", retries: 3 } });
   });
 });

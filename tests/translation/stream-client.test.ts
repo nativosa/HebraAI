@@ -67,6 +67,18 @@ describe("readTranslationStream", () => {
     });
   });
 
+  it("reports retry events", async () => {
+    const retries: unknown[] = [];
+    await readTranslationStream(
+      streamed(
+        line({ type: "retry", chunk: 2, attempt: 1, delayMs: 1000, reason: "HTTP 429" }),
+        line({ type: "complete", content: "x" })
+      ),
+      { onRetry: (r) => retries.push(r) }
+    );
+    expect(retries).toEqual([{ chunk: 2, attempt: 1, delayMs: 1000, reason: "HTTP 429" }]);
+  });
+
   it("returns a partial result marked as partial", async () => {
     const report = {
       cues: 2,

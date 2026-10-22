@@ -17,6 +17,7 @@ export type TranslationReport = {
   untranslated: UntranslatedCue[];
   requests: number; // API requests sent (incl. repairs and retries)
   repairs: number; // repair requests for invalid or missing translations
+  retries: number; // requests repeated after temporary errors (429, 5xx, timeouts)
   // Message of the request error that stopped the job, if any.
   failure?: string;
   removedSoundEffectCues: number;
