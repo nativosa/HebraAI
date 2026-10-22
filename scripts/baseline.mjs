@@ -10,35 +10,44 @@
 //      in explicit offline test mode (HEBRAAI_OFFLINE_TEST_MODE=1), with
 //      OPENAI_BASE_URL pointing at the fake and a fake API key (process env
 //      overrides .env.local, so the real key is never loaded into this server).
-//      A production build is used so the harness does not conflict with a
-//      running `next dev` (which holds the .next/dev lock).
+//      See scripts/app-server.mjs.
 //   3. POSTs every fixture in fixtures/srt/ to /api/translate, with sound-effect
-//      removal on and off, through the unmodified production route.
-//   4. check: compares each result byte-for-byte with fixtures/legacy-baseline/,
-//      then runs guard checks — current expectations kept separate from the
-//      legacy baseline (e.g. the default file-size cap).
-//      capture: writes the results there (refuses to overwrite without --overwrite).
+//      removal on and off, through the unmodified production route; then
+//      fixtures/srt/basic.srt with every prompt option combination.
+//   4. check: compares each SRT result byte-for-byte with fixtures/legacy-baseline/,
+//      compares fingerprints of every request the app sent to the fake server
+//      with fixtures/legacy-requests.json (model, instructions, input, schema;
+//      hashes only), then runs guard checks — current expectations kept separate
+//      from the legacy baseline (e.g. the default file-size cap).
+//      capture: writes the SRT results and request fingerprints (refuses to
+//      overwrite without --overwrite).
 //
 // The legacy baseline records CURRENT behaviour, including known defects
 // (see fixtures/KNOWN_DEFECTS.md). A match means "unchanged", not "correct".
 // Logs contain only file names, sizes, hashes and structural diffs — never cue text.
 
-import { spawn, execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { startFakeOpenAI, FAKE_API_KEY } from "./fake-openai.mjs";
+import { join } from "node:path";
+import { startFakeOpenAI } from "./fake-openai.mjs";
 import { inspectSrt, compareStructure } from "./srt-structure.mjs";
+import { buildFingerprintFile, compareFingerprints } from "./request-fingerprint.mjs";
+import {
+  ROOT,
+  FIXTURES,
+  UI_DEFAULT_FIELDS,
+  PROMPT_VARIANTS,
+  appUrl,
+  startApp,
+  stopApp,
+  waitForApp,
+  postFixture,
+} from "./app-server.mjs";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const FIXTURES = join(ROOT, "fixtures", "srt");
 const BASELINE = join(ROOT, "fixtures", "legacy-baseline");
+const FINGERPRINTS = join(ROOT, "fixtures", "legacy-requests.json");
 const PORT = Number(process.env.BASELINE_PORT) || 3123;
-const HOST = "127.0.0.1";
-const APP = `http://${HOST}:${PORT}`;
 
-// Form fields mirror the UI defaults in src/app/page.tsx.
 const VARIANTS = [
   { name: "sfx-on", removeSoundEffects: "true" },
   { name: "sfx-off", removeSoundEffects: "false" },
@@ -46,89 +55,33 @@ const VARIANTS = [
 
 const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 12);
 
-function startNext(baseURL) {
-  const nextBin = join(ROOT, "node_modules", "next", "dist", "bin", "next");
-  const env = {
-    ...process.env,
-    // Explicit offline test mode: the only way the route accepts a custom
-    // endpoint (loopback + fake key only; see src/lib/openai-client.ts).
-    HEBRAAI_OFFLINE_TEST_MODE: "1",
-    OPENAI_API_KEY: FAKE_API_KEY,
-    OPENAI_BASE_URL: baseURL,
-    NEXT_TELEMETRY_DISABLED: "1",
-  };
-  delete env.NODE_ENV;
-  delete env.MAX_FILE_SIZE_BYTES; // guard checks assume the default cap
-  console.log("building (next build)…");
-  try {
-    execFileSync(process.execPath, [nextBin, "build"], { cwd: ROOT, env, stdio: "pipe" });
-  } catch (err) {
-    throw new Error(`next build failed:
-${err.stdout ?? ""}${err.stderr ?? ""}`);
-  }
-  const child = spawn(process.execPath, [nextBin, "start", "-H", HOST, "-p", String(PORT)], {
-    cwd: ROOT,
-    env,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let log = "";
-  child.stdout.on("data", (d) => (log += d));
-  child.stderr.on("data", (d) => (log += d));
-  return { child, getLog: () => log };
-}
-
-function stopNext(child) {
-  if (child.exitCode !== null) return;
-  if (process.platform === "win32") {
-    try {
-      execFileSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
-    } catch {
-      /* already gone */
-    }
-  } else {
-    child.kill("SIGTERM");
-  }
-}
-
-async function waitForServer(child, getLog, timeoutMs = 180_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null) throw new Error(`next start exited early:\n${getLog()}`);
-    try {
-      const res = await fetch(`${APP}/`);
-      if (res.status < 500) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  throw new Error(`next start did not become ready in time:\n${getLog()}`);
-}
-
 async function runCase(fixture, variant) {
-  const buf = readFileSync(join(FIXTURES, fixture));
-  const fd = new FormData();
-  fd.append("file", new File([buf], fixture, { type: "application/x-subrip" }));
-  fd.append("tone", "Neutral");
-  fd.append("preserveBreaks", "true");
-  fd.append("maxChars", "42");
-  fd.append("glossary", "");
-  fd.append("removeSoundEffects", variant.removeSoundEffects);
-
-  const res = await fetch(`${APP}/api/translate`, { method: "POST", body: fd });
-  const body = await res.text();
+  const { ok, status, body } = await postFixture(PORT, fixture, {
+    ...UI_DEFAULT_FIELDS,
+    removeSoundEffects: variant.removeSoundEffects,
+  });
   const base = `${fixture.replace(/\.srt$/, "")}.${variant.name}`;
 
-  if (res.ok) {
+  if (ok) {
     const complete = body
       .split("\n")
       .filter((l) => l.trim())
       .map((l) => JSON.parse(l))
       .find((m) => m.type === "complete");
-    if (complete) return { file: `${base}.srt`, content: Buffer.from(complete.content, "utf8") };
+    if (complete) return { name: base, file: `${base}.srt`, content: Buffer.from(complete.content, "utf8") };
   }
   // Non-success outcomes are part of the baseline too (status + raw body).
-  return { file: `${base}.result.txt`, content: Buffer.from(`HTTP ${res.status}\n${body}`, "utf8") };
+  return { name: base, file: `${base}.result.txt`, content: Buffer.from(`HTTP ${status}\n${body}`, "utf8") };
+}
+
+// Records the request bodies the fake server received while `fn` ran.
+// Cases run one at a time and each awaits the full response stream, so every
+// request is attributed to exactly one case, in the order it was sent.
+async function recordRequests(fake, requestsByCase, name, fn) {
+  const start = fake.requests.length;
+  const result = await fn();
+  requestsByCase[name] = fake.requests.slice(start);
+  return result;
 }
 
 // Current expectations that are not part of the legacy baseline.
@@ -137,7 +90,7 @@ async function runGuards() {
   const size = 600 * 1024;
   const fd = new FormData();
   fd.append("file", new File([Buffer.alloc(size, "a")], "too-big.srt"));
-  const res = await fetch(`${APP}/api/translate`, { method: "POST", body: fd });
+  const res = await fetch(`${appUrl(PORT)}/api/translate`, { method: "POST", body: fd });
   const body = await res.json().catch(() => null);
   const ok =
     res.status === 413 &&
@@ -157,32 +110,39 @@ async function main() {
     return 2;
   }
   const existing = existsSync(BASELINE) ? readdirSync(BASELINE).filter((f) => !f.startsWith(".")) : [];
-  if (mode === "capture" && existing.length > 0 && !overwrite) {
+  if (mode === "capture" && (existing.length > 0 || existsSync(FINGERPRINTS)) && !overwrite) {
     console.error(
-      `Refusing to overwrite ${existing.length} existing legacy baseline file(s).\n` +
+      `Refusing to overwrite the existing legacy baseline (${existing.length} file(s)) / request fingerprints.\n` +
         "Regeneration must be explicit: npm run baseline:capture -- --overwrite"
     );
     return 2;
   }
-  if (mode === "check" && existing.length === 0) {
-    console.error("No legacy baseline found. Capture one explicitly first.");
+  if (mode === "check" && (existing.length === 0 || !existsSync(FINGERPRINTS))) {
+    console.error("No legacy baseline or request fingerprints found. Capture them explicitly first.");
     return 2;
   }
 
   const fixtures = readdirSync(FIXTURES).filter((f) => f.endsWith(".srt")).sort();
   const fake = await startFakeOpenAI();
-  const { child, getLog } = startNext(fake.baseURL);
+  const { child, getLog } = startApp(fake.baseURL, PORT);
   const results = [];
+  const requestsByCase = {};
   let guardFailures = [];
 
   try {
-    await waitForServer(child, getLog);
+    await waitForApp(child, getLog, PORT);
     for (const fixture of fixtures) {
-      for (const variant of VARIANTS) results.push(await runCase(fixture, variant));
+      for (const variant of VARIANTS) {
+        const name = `${fixture.replace(/\.srt$/, "")}.${variant.name}`;
+        results.push(await recordRequests(fake, requestsByCase, name, () => runCase(fixture, variant)));
+      }
+    }
+    for (const { name, fields } of PROMPT_VARIANTS) {
+      await recordRequests(fake, requestsByCase, `prompt.${name}`, () => postFixture(PORT, "basic.srt", fields));
     }
     if (mode === "check") guardFailures = await runGuards();
   } finally {
-    stopNext(child);
+    stopApp(child);
     await fake.close();
   }
 
@@ -191,6 +151,7 @@ async function main() {
     console.error("Unexpected fake-server traffic; aborting.");
     return 1;
   }
+  const fingerprints = buildFingerprintFile(requestsByCase);
 
   if (mode === "capture") {
     if (existsSync(BASELINE)) rmSync(BASELINE, { recursive: true });
@@ -199,6 +160,8 @@ async function main() {
       writeFileSync(join(BASELINE, r.file), r.content);
       console.log(`captured  ${r.file}  (${r.content.length} B, ${sha(r.content)})`);
     }
+    writeFileSync(FINGERPRINTS, JSON.stringify(fingerprints, null, 2) + "\n");
+    console.log(`captured  request fingerprints for ${Object.keys(fingerprints.cases).length} case(s)`);
     return 0;
   }
 
@@ -229,11 +192,23 @@ async function main() {
       console.log(`FAIL  ${f}  (baseline file no longer produced)`);
     }
   }
+
+  const requestCount = Object.values(fingerprints.cases).reduce((n, c) => n + c.length, 0);
+  const fpDiffs = compareFingerprints(JSON.parse(readFileSync(FINGERPRINTS, "utf8")), fingerprints);
+  if (fpDiffs.length) {
+    failures += fpDiffs.length;
+    for (const d of fpDiffs) console.log(`FAIL  request fingerprint: ${d}`);
+  } else {
+    console.log(
+      `PASS  request fingerprints: ${requestCount} request(s) in ${Object.keys(fingerprints.cases).length} case(s) identical`
+    );
+  }
+
   failures += guardFailures.length;
   console.log(
     failures
       ? `\n${failures} failure(s)`
-      : `\nAll ${results.length} cases match the legacy baseline; guard checks pass.`
+      : `\nAll ${results.length} cases match the legacy baseline; request fingerprints and guard checks pass.`
   );
   return failures ? 1 : 0;
 }

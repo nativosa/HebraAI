@@ -1,0 +1,218 @@
+{
+  "prompts": [
+    {
+      "name": "neutral.breaks-on",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "true",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "neutral.breaks-off",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "false",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- You may reflow lines for readability while respecting the character limit.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "formal.breaks-on",
+      "fields": {
+        "tone": "Formal",
+        "preserveBreaks": "true",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use formal, polite Hebrew register suitable for professional or official contexts.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "formal.breaks-off",
+      "fields": {
+        "tone": "Formal",
+        "preserveBreaks": "false",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use formal, polite Hebrew register suitable for professional or official contexts.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- You may reflow lines for readability while respecting the character limit.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "informal.breaks-on",
+      "fields": {
+        "tone": "Informal",
+        "preserveBreaks": "true",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use informal, natural spoken Hebrew suitable for casual dialogue.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "informal.breaks-off",
+      "fields": {
+        "tone": "Informal",
+        "preserveBreaks": "false",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use informal, natural spoken Hebrew suitable for casual dialogue.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- You may reflow lines for readability while respecting the character limit.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "unknown-tone",
+      "fields": {
+        "tone": "Sarcastic",
+        "preserveBreaks": "true",
+        "maxChars": "42",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "maxchars-missing",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "true",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 20 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "maxchars-nan",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "true",
+        "maxChars": "abc",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "maxchars-low",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "true",
+        "maxChars": "10",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 20 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "maxchars-high",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "true",
+        "maxChars": "100",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 80 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    },
+    {
+      "name": "maxchars-fraction",
+      "fields": {
+        "tone": "Neutral",
+        "preserveBreaks": "true",
+        "maxChars": "42.5",
+        "glossary": "",
+        "removeSoundEffects": "false"
+      },
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42.5 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema."
+    }
+  ],
+  "request": {
+    "fixture": "basic.srt",
+    "fields": {
+      "tone": "Neutral",
+      "preserveBreaks": "true",
+      "maxChars": "42",
+      "glossary": "",
+      "removeSoundEffects": "false"
+    },
+    "body": {
+      "model": "gpt-5.2",
+      "instructions": "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n- Use neutral conversational Hebrew suitable for everyday speech.\n- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n- Maintain correct gender and plurality from context.\n- Preserve numbers, punctuation, and symbols.\n- Keep each subtitle line at or below 42 characters.\n- Preserve original line breaks where possible; do not reflow text.\n- Do NOT add explanations, comments, or extra text.\n- Return ONLY valid JSON matching the requested schema.",
+      "input": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "Translate this JSON array of subtitle items.\nReturn a JSON object with key 'items' which is an array of {index, text_he}.\n\n[{\"index\":1,\"text\":\"Hello there.\"},{\"index\":2,\"text\":\"Are you coming with us tonight?\"},{\"index\":3,\"text\":\"I'm tired, but I'll come.\"},{\"index\":4,\"text\":\"Thanks, it's 7:30, don't be late!\"}]"
+            }
+          ]
+        }
+      ],
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "name": "subtitle_translation",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "index": {
+                      "type": "number"
+                    },
+                    "text_he": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "index",
+                    "text_he"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "items"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "streams": {
+    "basic.srt": {
+      "status": 200,
+      "lines": [
+        "{\"type\":\"progress\",\"progress\":100,\"currentChunk\":1,\"totalChunks\":1}",
+        "{\"type\":\"complete\",\"content\":\"1\\n00:00:01,000 --> 00:00:03,000\\n[HE] Hello there.\\n\\n2\\n00:00:03,500 --> 00:00:05,200\\n[HE] Are you coming with us tonight?\\n\\n3\\n00:00:05,400 --> 00:00:07,000\\n[HE] I'm tired, but I'll come.\\n\\n4\\n00:00:07,500 --> 00:00:09,900\\n[HE] Thanks, it's 7:30, don't be late!\\n\"}"
+      ]
+    },
+    "multi-chunk.srt": {
+      "status": 200,
+      "requestItemCounts": [
+        60,
+        60,
+        30
+      ],
+      "progressLines": [
+        "{\"type\":\"progress\",\"progress\":33,\"currentChunk\":1,\"totalChunks\":3}",
+        "{\"type\":\"progress\",\"progress\":67,\"currentChunk\":2,\"totalChunks\":3}",
+        "{\"type\":\"progress\",\"progress\":100,\"currentChunk\":3,\"totalChunks\":3}"
+      ],
+      "lastLineType": "complete"
+    }
+  }
+}

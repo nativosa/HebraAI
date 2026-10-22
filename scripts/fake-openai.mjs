@@ -6,7 +6,9 @@
 // The "[HE] " marker makes English fallbacks (missing items) visible in output.
 //
 // Only requests carrying the expected fake bearer token are accepted, so a
-// real key can never be used by accident. Request bodies are never logged.
+// real key can never be used by accident. Request bodies are never logged;
+// accepted bodies are kept in memory (`requests`) only so the harness can
+// fingerprint them.
 
 import { createServer } from "node:http";
 
@@ -32,7 +34,9 @@ function responseFor(text) {
   };
 }
 
-function echoItems(body) {
+// Also used by the unit tests as the stub model, so they translate exactly
+// like the server that produced the legacy baseline.
+export function echoItems(body) {
   // The route sends one user message whose text ends with "\n\n<JSON array>".
   const text = body?.input?.[0]?.content?.[0]?.text ?? "";
   const json = text.slice(text.indexOf("\n\n[") + 2);
@@ -44,6 +48,7 @@ function echoItems(body) {
 
 export function startFakeOpenAI() {
   const stats = { requests: 0, rejected: 0 };
+  const requests = [];
 
   const server = createServer((req, res) => {
     const send = (status, obj) => {
@@ -65,8 +70,10 @@ export function startFakeOpenAI() {
     req.on("data", (c) => (data += c));
     req.on("end", () => {
       try {
-        const out = echoItems(JSON.parse(data));
+        const body = JSON.parse(data);
+        const out = echoItems(body);
         stats.requests++;
+        requests.push(body);
         send(200, responseFor(JSON.stringify(out)));
       } catch {
         stats.rejected++;
@@ -81,6 +88,7 @@ export function startFakeOpenAI() {
       resolve({
         baseURL: `http://127.0.0.1:${port}/v1`,
         stats,
+        requests,
         close: () => new Promise((r) => server.close(r)),
       });
     });
