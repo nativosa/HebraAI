@@ -1,0 +1,143 @@
+[
+  {
+    "id": "nm-01",
+    "category": "names",
+    "description": "A name that is also an English word ('Hope') stays a name.",
+    "oracle": { "characters": [{ "name": "Hope", "gender": "female", "hebrewName": "הופ" }] },
+    "cues": [
+      { "text": "Somebody help me with these boxes!" },
+      { "key": "a", "text": "Hope, come here. I need your help." }
+    ],
+    "checks": [
+      { "id": "name", "dimension": "names", "type": "anyOf", "cue": "a", "forms": ["הופ", "הוֹפּ"] },
+      { "id": "not-word", "dimension": "names", "type": "noneOf", "cue": "a", "forms": ["תקווה", "תקוה"] }
+    ],
+    "reference": { "a": "הופ, בואי לכאן. אני צריך את העזרה שלך." },
+    "wrong": { "a": "תקווה, בואי לכאן. אני צריך את העזרה שלך." },
+    "wrongFails": ["name", "not-word"]
+  },
+  {
+    "id": "nm-02",
+    "category": "names",
+    "description": "'Will' as a name, not 'will' (desire).",
+    "oracle": { "characters": [{ "name": "Will", "gender": "male", "hebrewName": "וויל" }] },
+    "cues": [
+      { "text": "Is the car here yet?" },
+      { "key": "a", "text": "Will is waiting outside." }
+    ],
+    "checks": [
+      { "id": "name", "dimension": "names", "type": "anyOf", "cue": "a", "forms": ["וויל", "ויל"] },
+      { "id": "not-word", "dimension": "names", "type": "noneOf", "cue": "a", "forms": ["רצון"] }
+    ],
+    "reference": { "a": "וויל מחכה בחוץ." },
+    "wrong": { "a": "הרצון מחכה בחוץ." },
+    "wrongFails": ["name", "not-word"]
+  },
+  {
+    "id": "nm-03",
+    "category": "names",
+    "description": "'Rose' as a name, not the flower.",
+    "oracle": { "characters": [{ "name": "Rose", "gender": "female", "hebrewName": "רוז" }] },
+    "cues": [
+      { "text": "Someone is at the door." },
+      { "key": "a", "text": "Rose, the doctor is here." }
+    ],
+    "checks": [
+      { "id": "name", "dimension": "names", "type": "anyOf", "cue": "a", "forms": ["רוז"] },
+      { "id": "not-word", "dimension": "names", "type": "noneOf", "cue": "a", "forms": ["ורד", "ורדה"] }
+    ],
+    "reference": { "a": "רוז, הרופא כאן." },
+    "wrong": { "a": "ורד, הרופא כאן." },
+    "wrongFails": ["name", "not-word"]
+  },
+  {
+    "id": "nm-04",
+    "category": "names",
+    "description": "'Bill' as a name and 'bill' as a word in the same line.",
+    "oracle": { "characters": [{ "name": "Bill", "gender": "male", "hebrewName": "ביל" }] },
+    "cues": [
+      { "text": "Who paid for dinner?" },
+      { "key": "a", "text": "Bill paid the bill." }
+    ],
+    "checks": [
+      { "id": "name", "dimension": "names", "type": "anyOf", "cue": "a", "forms": ["ביל"] },
+      { "id": "word", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["חשבון"] }
+    ],
+    "reference": { "a": "ביל שילם את החשבון." },
+    "wrong": { "a": "החשבון שילם את החשבון." },
+    "wrongFails": ["name"]
+  },
+  {
+    "id": "nm-05",
+    "category": "names",
+    "description": "Glossary spelling of an unusual name is used every time.",
+    "input": { "glossary": "Siobhan = שבון" },
+    "oracle": { "characters": [{ "name": "Siobhan", "gender": "female", "hebrewName": "שבון" }] },
+    "cues": [
+      { "key": "a", "text": "Siobhan is late again." },
+      { "filler": 2 },
+      { "key": "b", "text": "Call Siobhan, please." }
+    ],
+    "checks": [
+      { "id": "glossary-a", "dimension": "names", "type": "anyOf", "cue": "a", "forms": ["שבון"] },
+      { "id": "glossary-b", "dimension": "names", "type": "anyOf", "cue": "b", "forms": ["שבון"] }
+    ],
+    "reference": { "a": "שבון שוב מאחרת.", "b": "תתקשר לשבון, בבקשה." },
+    "wrong": { "a": "שיבון שוב מאחרת.", "b": "תתקשר לשיבון, בבקשה." },
+    "wrongFails": ["glossary-a", "glossary-b"]
+  },
+  {
+    "id": "nm-06",
+    "category": "names",
+    "description": "One name spelled the same way across three chunks (cues 1, 61, 121).",
+    "oracle": { "characters": [{ "name": "Michael", "gender": "male" }] },
+    "cues": [
+      { "key": "a", "text": "Michael is here." },
+      { "filler": 59 },
+      { "key": "b", "text": "Has anyone seen Michael?" },
+      { "filler": 59 },
+      { "key": "c", "text": "Michael, wait!" }
+    ],
+    "checks": [
+      { "id": "same-spelling", "dimension": "names", "type": "sameGroup", "cues": ["a", "b", "c"], "groups": { "maykel": ["מייקל", "מיקל", "מייקאל", "מאייקל"], "mikhael": ["מיכאל"] } }
+    ],
+    "reference": { "a": "מייקל כאן.", "b": "מישהו ראה את מייקל?", "c": "מייקל, חכה!" },
+    "wrong": { "a": "מייקל כאן.", "b": "מישהו ראה את מיכאל?", "c": "מייקל, חכה!" },
+    "wrongFails": ["same-spelling"]
+  },
+  {
+    "id": "nm-07",
+    "category": "names",
+    "description": "One name spelled the same way across two chunks (cues 1 and 62).",
+    "oracle": { "characters": [{ "name": "Katherine", "gender": "female" }] },
+    "cues": [
+      { "key": "a", "text": "Katherine called this morning." },
+      { "filler": 60 },
+      { "key": "b", "text": "Katherine says hello." }
+    ],
+    "checks": [
+      { "id": "same-spelling", "dimension": "names", "type": "sameGroup", "cues": ["a", "b"], "groups": { "katrin": ["קתרין"], "kat-rin": ["קת'רין"], "kaatrin": ["קאתרין"], "katerin": ["קטרין", "קטרין"], "katrina": ["קתרינה", "קטרינה"] } }
+    ],
+    "reference": { "a": "קתרין התקשרה הבוקר.", "b": "קתרין מוסרת ד\"ש." },
+    "wrong": { "a": "קתרין התקשרה הבוקר.", "b": "קאתרין מוסרת ד\"ש." },
+    "wrongFails": ["same-spelling"]
+  },
+  {
+    "id": "nm-08",
+    "category": "names",
+    "description": "Glossary nickname is kept, not translated as 'doctor'.",
+    "input": { "glossary": "Doc = דוק" },
+    "oracle": { "characters": [{ "name": "Doc", "gender": "male", "hebrewName": "דוק" }] },
+    "cues": [
+      { "text": "He fell off the ladder." },
+      { "key": "a", "text": "Doc, are you okay?" }
+    ],
+    "checks": [
+      { "id": "glossary", "dimension": "names", "type": "anyOf", "cue": "a", "forms": ["דוק"] },
+      { "id": "not-word", "dimension": "names", "type": "noneOf", "cue": "a", "forms": ["דוקטור", "רופא", "ד\"ר"] }
+    ],
+    "reference": { "a": "דוק, אתה בסדר?" },
+    "wrong": { "a": "דוקטור, אתה בסדר?" },
+    "wrongFails": ["glossary", "not-word"]
+  }
+]

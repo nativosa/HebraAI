@@ -1,0 +1,236 @@
+[
+  {
+    "id": "spk-01",
+    "category": "speaker-gender",
+    "description": "Female speaker named by a speaker label; first-person adjective.",
+    "oracle": { "characters": [{ "name": "Rachel", "gender": "female", "hebrewName": "רייצ'ל" }] },
+    "cues": [
+      { "text": "Long day at the hospital?" },
+      { "key": "a", "text": "RACHEL: I'm so tired. I worked a double shift." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה", "מותשת", "גמורה", "סחוטה", "הרוגה"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "מותש", "גמור", "סחוט", "הרוג"] }
+    ],
+    "reference": { "a": "רייצ'ל: אני כל כך עייפה. עבדתי משמרת כפולה." },
+    "wrong": { "a": "רייצ'ל: אני כל כך עייף. עבדתי משמרת כפולה." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-02",
+    "category": "speaker-gender",
+    "description": "Male speaker named by a speaker label; 'ready'.",
+    "oracle": { "characters": [{ "name": "David", "gender": "male", "hebrewName": "דייוויד" }] },
+    "cues": [
+      { "text": "The car is outside." },
+      { "key": "a", "text": "DAVID: I'm ready. We can leave now." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מוכן"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מוכנה"] }
+    ],
+    "reference": { "a": "דייוויד: אני מוכן. אפשר לצאת עכשיו." },
+    "wrong": { "a": "דייוויד: אני מוכנה. אפשר לצאת עכשיו." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "spk-03",
+    "category": "speaker-gender",
+    "description": "Female speaker identified by self-reference ('your mother').",
+    "cues": [
+      { "text": "You came home at three in the morning." },
+      { "key": "a", "text": "As your mother, I'm worried about you." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מודאגת", "דואגת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מודאג", "דואג"] }
+    ],
+    "reference": { "a": "בתור אמא שלך, אני דואגת לך." },
+    "wrong": { "a": "בתור אמא שלך, אני דואג לך." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-04",
+    "category": "speaker-gender",
+    "description": "Male speaker identified by self-reference ('her husband'); present-tense verb.",
+    "cues": [
+      { "text": "Visiting hours are over, sir." },
+      { "key": "a", "text": "I'm her husband, and I'm not leaving." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["הולך", "עוזב", "זז", "יוצא"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["הולכת", "עוזבת", "זזה", "יוצאת"] }
+    ],
+    "reference": { "a": "אני בעלה, ואני לא הולך לשום מקום." },
+    "wrong": { "a": "אני בעלה, ואני לא הולכת לשום מקום." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "spk-05",
+    "category": "speaker-gender",
+    "description": "Female speaker identified by a gendered role noun ('waitress').",
+    "cues": [
+      { "text": "Excuse me, is this your first day?" },
+      { "key": "a", "text": "I'm the new waitress. Sorry, I'm a little nervous." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["לחוצה", "מתוחה", "עצבנית", "נרגשת", "חוששת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["לחוץ", "מתוח", "עצבני", "נרגש", "חושש"] }
+    ],
+    "reference": { "a": "אני המלצרית החדשה. סליחה, אני קצת לחוצה." },
+    "wrong": { "a": "אני המלצרית החדשה. סליחה, אני קצת לחוץ." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-06",
+    "category": "speaker-gender",
+    "description": "Male speaker label; 'hungry'.",
+    "oracle": { "characters": [{ "name": "James", "gender": "male", "hebrewName": "ג'יימס" }] },
+    "cues": [
+      { "text": "Dinner will be ready in an hour." },
+      { "key": "a", "text": "JAMES: I'm hungry. Is there anything to eat now?" }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["רעב"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["רעבה"] }
+    ],
+    "reference": { "a": "ג'יימס: אני רעב. יש משהו לאכול עכשיו?" },
+    "wrong": { "a": "ג'יימס: אני רעבה. יש משהו לאכול עכשיו?" },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "spk-07",
+    "category": "speaker-gender",
+    "description": "Female speaker label; 'I'm sure'.",
+    "oracle": { "characters": [{ "name": "Emma", "gender": "female", "hebrewName": "אמה" }] },
+    "cues": [
+      { "text": "He hasn't called in two days." },
+      { "key": "a", "text": "EMMA: I'm sure he'll call tonight." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["בטוחה"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["בטוח"] }
+    ],
+    "reference": { "a": "אמה: אני בטוחה שהוא יתקשר הערב." },
+    "wrong": { "a": "אמה: אני בטוח שהוא יתקשר הערב." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-08",
+    "category": "speaker-gender",
+    "description": "Male speaker label; 'not scared'.",
+    "oracle": { "characters": [{ "name": "Omar", "gender": "male", "hebrewName": "עומר" }] },
+    "cues": [
+      { "text": "He threatened you in front of everyone." },
+      { "key": "a", "text": "OMAR: I'm not scared of him." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מפחד", "פוחד", "מפוחד", "חושש"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מפחדת", "פוחדת", "מפוחדת", "חוששת"] }
+    ],
+    "reference": { "a": "עומר: אני לא מפחד ממנו." },
+    "wrong": { "a": "עומר: אני לא מפחדת ממנו." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "spk-09",
+    "category": "speaker-gender",
+    "description": "Female speaker label; 'I know'.",
+    "oracle": { "characters": [{ "name": "Lisa", "gender": "female", "hebrewName": "ליסה" }] },
+    "cues": [
+      { "text": "Nobody else saw anything that night." },
+      { "key": "a", "text": "LISA: I know what I saw." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יודעת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יודע"] }
+    ],
+    "reference": { "a": "ליסה: אני יודעת מה ראיתי." },
+    "wrong": { "a": "ליסה: אני יודע מה ראיתי." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-10",
+    "category": "speaker-gender",
+    "description": "Male speaker label; 'I think'.",
+    "oracle": { "characters": [{ "name": "Paul", "gender": "male", "hebrewName": "פול" }] },
+    "cues": [
+      { "text": "The door was open when we got here." },
+      { "key": "a", "text": "PAUL: I think we should call the police." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["חושב", "סבור", "מציע"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["חושבת", "סבורה", "מציעה"] }
+    ],
+    "reference": { "a": "פול: אני חושב שכדאי שנתקשר למשטרה." },
+    "wrong": { "a": "פול: אני חושבת שכדאי שנתקשר למשטרה." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "spk-11",
+    "category": "speaker-gender",
+    "description": "Female speaker label and self-reference ('pregnant'); happy and scared.",
+    "oracle": { "characters": [{ "name": "Nina", "gender": "female", "hebrewName": "נינה" }] },
+    "cues": [
+      { "text": "What did the doctor say?" },
+      { "key": "a", "text": "NINA: I'm pregnant. I'm happy, but I'm scared." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["שמחה", "מאושרת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["שמח", "מאושר", "מפחד", "פוחד", "מפוחד"] }
+    ],
+    "reference": { "a": "נינה: אני בהיריון. אני שמחה, אבל אני מפחדת." },
+    "wrong": { "a": "נינה: אני בהיריון. אני שמח, אבל אני מפחד." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-12",
+    "category": "speaker-gender",
+    "description": "Male speaker label; 'busy'.",
+    "oracle": { "characters": [{ "name": "Sam", "gender": "male", "hebrewName": "סאם" }] },
+    "cues": [
+      { "text": "Do you have a minute?" },
+      { "key": "a", "text": "SAM: I'm busy right now. I'll get back to you later." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עסוק", "טרוד"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עסוקה", "טרודה"] }
+    ],
+    "reference": { "a": "סאם: אני עסוק כרגע. אחזור אליך אחר כך." },
+    "wrong": { "a": "סאם: אני עסוקה כרגע. אחזור אליך אחר כך." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "spk-13",
+    "category": "speaker-gender",
+    "description": "Female speaker labelled by role ('MOM'); 'can't'.",
+    "cues": [
+      { "text": "It's two in the morning. Why are you up?" },
+      { "key": "a", "text": "MOM: I can't sleep." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יכולה", "מצליחה", "מסוגלת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יכול", "מצליח", "מסוגל"] }
+    ],
+    "reference": { "a": "אמא: אני לא מצליחה לישון." },
+    "wrong": { "a": "אמא: אני לא מצליח לישון." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "spk-14",
+    "category": "speaker-gender",
+    "description": "Male speaker labelled by role ('GRANDPA'); 'married'.",
+    "cues": [
+      { "text": "How long have you two been together?" },
+      { "key": "a", "text": "GRANDPA: I've been married for forty years." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["נשוי"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["נשואה"] },
+      { "id": "forty", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["ארבעים", "40"] }
+    ],
+    "reference": { "a": "סבא: אני נשוי כבר ארבעים שנה." },
+    "wrong": { "a": "סבא: אני נשואה כבר ארבעים שנה." },
+    "wrongFails": ["masc", "no-fem"]
+  }
+]

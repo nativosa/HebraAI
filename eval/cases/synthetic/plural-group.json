@@ -1,0 +1,162 @@
+[
+  {
+    "id": "pl-01",
+    "category": "plural-group",
+    "description": "Female group ('girls'); 'are you ready'.",
+    "cues": [
+      { "text": "The bus leaves in five minutes." },
+      { "key": "a", "text": "Girls, are you ready?" }
+    ],
+    "checks": [
+      { "id": "fem-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מוכנות"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מוכנים", "מוכנה", "מוכן"] }
+    ],
+    "reference": { "a": "בנות, אתן מוכנות?" },
+    "wrong": { "a": "בנות, אתם מוכנים?" },
+    "wrongFails": ["fem-pl", "no-other"]
+  },
+  {
+    "id": "pl-02",
+    "category": "plural-group",
+    "description": "Male group ('boys'); 'are you hungry'.",
+    "cues": [
+      { "text": "Practice is over for today." },
+      { "key": "a", "text": "Boys, are you hungry?" }
+    ],
+    "checks": [
+      { "id": "masc-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["רעבים"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["רעבות", "רעב", "רעבה"] }
+    ],
+    "reference": { "a": "בנים, אתם רעבים?" },
+    "wrong": { "a": "בנים, אתה רעב?" },
+    "wrongFails": ["masc-pl", "no-other"]
+  },
+  {
+    "id": "pl-03",
+    "category": "plural-group",
+    "description": "Mixed audience ('ladies and gentlemen') takes the masculine plural.",
+    "cues": [
+      { "text": "Welcome to tonight's show." },
+      { "key": "a", "text": "Ladies and gentlemen, are you ready?" }
+    ],
+    "checks": [
+      { "id": "masc-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מוכנים"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מוכנות", "מוכן", "מוכנה"] }
+    ],
+    "reference": { "a": "גבירותיי ורבותיי, אתם מוכנים?" },
+    "wrong": { "a": "גבירותיי ורבותיי, אתן מוכנות?" },
+    "wrongFails": ["masc-pl", "no-other"]
+  },
+  {
+    "id": "pl-04",
+    "category": "plural-group",
+    "description": "'You' addresses a group ('guys'), not one person.",
+    "cues": [
+      { "text": "Hey, guys! Over here!" },
+      { "key": "a", "text": "Are you coming to the party?" }
+    ],
+    "checks": [
+      { "id": "plural", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["באים", "תבואו", "מגיעים", "תגיעו"] },
+      { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["אתה בא", "את באה", "תבוא", "תבואי", "מגיע", "מגיעה"] }
+    ],
+    "reference": { "a": "אתם באים למסיבה?" },
+    "wrong": { "a": "אתה בא למסיבה?" },
+    "wrongFails": ["plural", "no-singular"]
+  },
+  {
+    "id": "pl-05",
+    "category": "plural-group",
+    "description": "Both parents addressed together (mixed pair, masculine plural).",
+    "cues": [
+      { "text": "I've looked everywhere." },
+      { "key": "a", "text": "Mom, Dad, do you know where my keys are?" }
+    ],
+    "checks": [
+      { "id": "masc-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["יודעים"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["יודע", "יודעת", "יודעות"] }
+    ],
+    "reference": { "a": "אמא, אבא, אתם יודעים איפה המפתחות שלי?" },
+    "wrong": { "a": "אמא, אבא, את יודעת איפה המפתחות שלי?" },
+    "wrongFails": ["masc-pl", "no-other"]
+  },
+  {
+    "id": "pl-06",
+    "category": "plural-group",
+    "description": "Two women addressed; past tense and adjective in feminine plural.",
+    "cues": [
+      { "text": "The concert is over. Everyone is clapping." },
+      { "key": "a", "text": "Ladies, you two were amazing tonight." }
+    ],
+    "checks": [
+      { "id": "fem-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מדהימות", "נהדרות", "הייתן"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מדהימים", "נהדרים", "הייתם", "מדהים", "מדהימה"] }
+    ],
+    "reference": { "a": "גבירותיי, שתיכן הייתן מדהימות הערב." },
+    "wrong": { "a": "גבירותיי, שניכם הייתם מדהימים הערב." },
+    "wrongFails": ["fem-pl", "no-other"]
+  },
+  {
+    "id": "pl-07",
+    "category": "plural-group",
+    "description": "Children of unknown gender addressed together (masculine plural default).",
+    "cues": [
+      { "text": "School started ten minutes ago." },
+      { "key": "a", "text": "Kids, you're late again!" }
+    ],
+    "checks": [
+      { "id": "plural", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מאחרים", "איחרתם", "מאחרות", "איחרתן"] },
+      { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מאחר", "מאחרת", "איחרת"] }
+    ],
+    "reference": { "a": "ילדים, אתם שוב מאחרים!" },
+    "wrong": { "a": "ילדים, אתה שוב מאחר!" },
+    "wrongFails": ["plural", "no-singular"]
+  },
+  {
+    "id": "pl-08",
+    "category": "plural-group",
+    "description": "Two girls thanked together; feminine plural adjective.",
+    "cues": [
+      { "text": "We made you some soup." },
+      { "key": "a", "text": "Thank you both, girls. You're very kind." }
+    ],
+    "checks": [
+      { "id": "fem-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["נחמדות", "אדיבות", "מתוקות"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["נחמדים", "אדיבים", "מתוקים", "נחמדה", "אדיבה"] }
+    ],
+    "reference": { "a": "תודה לשתיכן, בנות. אתן מאוד נחמדות." },
+    "wrong": { "a": "תודה לשניכם, בנות. אתם מאוד נחמדים." },
+    "wrongFails": ["fem-pl", "no-other"]
+  },
+  {
+    "id": "pl-09",
+    "category": "plural-group",
+    "description": "Plural speakers ('we', a mother and a father) take the masculine plural.",
+    "cues": [
+      { "text": "Here is your diploma." },
+      { "key": "a", "text": "MOM AND DAD: We're so proud of you." }
+    ],
+    "checks": [
+      { "id": "masc-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["גאים"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["גאות", "גאה"] }
+    ],
+    "reference": { "a": "אמא ואבא: אנחנו כל כך גאים בך." },
+    "wrong": { "a": "אמא ואבא: אני כל כך גאה בך." },
+    "wrongFails": ["masc-pl", "no-other"]
+  },
+  {
+    "id": "pl-10",
+    "category": "plural-group",
+    "description": "A team of unknown composition addressed; plural (masculine default).",
+    "cues": [
+      { "text": "The game starts in one minute." },
+      { "key": "a", "text": "Team, focus. Are you listening to me?" }
+    ],
+    "checks": [
+      { "id": "plural", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מקשיבים", "שומעים", "מקשיבות", "שומעות"] },
+      { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מקשיב", "מקשיבה", "שומע", "שומעת"] }
+    ],
+    "reference": { "a": "צוות, להתרכז. אתם מקשיבים לי?" },
+    "wrong": { "a": "צוות, להתרכז. אתה מקשיב לי?" },
+    "wrongFails": ["plural", "no-singular"]
+  }
+]

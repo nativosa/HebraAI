@@ -1,0 +1,75 @@
+[
+  {
+    "id": "sdh-01",
+    "category": "sdh-labels",
+    "description": "Parenthetical speaker label '(MARY)' is removed by sound-effect removal; the speaker is female.",
+    "settings": { "removeSoundEffects": true },
+    "oracle": { "characters": [{ "name": "Mary", "gender": "female", "hebrewName": "מרי" }] },
+    "cues": [
+      { "text": "You've been on your feet since six." },
+      { "key": "a", "text": "(MARY) I'm tired." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה", "מותשת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "מותש"] }
+    ],
+    "reference": { "a": "אני עייפה." },
+    "wrong": { "a": "אני עייף." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "sdh-02",
+    "category": "sdh-labels",
+    "description": "Parenthetical speaker label '(JOHN)' is removed; the speaker is male.",
+    "settings": { "removeSoundEffects": true },
+    "oracle": { "characters": [{ "name": "John", "gender": "male", "hebrewName": "ג'ון" }] },
+    "cues": [
+      { "text": "We leave in five minutes." },
+      { "key": "a", "text": "(JOHN) I'm ready." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מוכן"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מוכנה"] }
+    ],
+    "reference": { "a": "אני מוכן." },
+    "wrong": { "a": "אני מוכנה." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "sdh-03",
+    "category": "sdh-labels",
+    "description": "Parenthetical role label '(GRANDMA)' is removed; the speaker is female.",
+    "settings": { "removeSoundEffects": true },
+    "cues": [
+      { "text": "Surprise! We drove all night." },
+      { "key": "a", "text": "(GRANDMA) I'm so happy to see you." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["שמחה", "מאושרת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["שמח", "מאושר"] }
+    ],
+    "reference": { "a": "אני כל כך שמחה לראות אתכם." },
+    "wrong": { "a": "אני כל כך שמח לראות אתכם." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "sdh-04",
+    "category": "sdh-labels",
+    "description": "Label '(DAVID)' removed: male speaker; the female addressee is named in the line.",
+    "settings": { "removeSoundEffects": true },
+    "oracle": { "characters": [{ "name": "David", "gender": "male", "hebrewName": "דייוויד" }, { "name": "Sarah", "gender": "female", "hebrewName": "שרה" }] },
+    "cues": [
+      { "text": "We should have left an hour ago." },
+      { "key": "a", "text": "(DAVID) I know, Sarah. You're right." }
+    ],
+    "checks": [
+      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יודע"] },
+      { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יודעת"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"] },
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["צודק"] }
+    ],
+    "reference": { "a": "אני יודע, שרה. את צודקת." },
+    "wrong": { "a": "אני יודעת, שרה. אתה צודק." },
+    "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
+  }
+]

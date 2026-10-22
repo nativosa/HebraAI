@@ -1,0 +1,153 @@
+[
+  {
+    "id": "sa-01",
+    "category": "speaker-addressee",
+    "description": "Female speaker (label) to a male addressee (name) in one line.",
+    "oracle": { "characters": [{ "name": "Dana", "gender": "female", "hebrewName": "דנה" }, { "name": "Tom", "gender": "male", "hebrewName": "טום" }] },
+    "cues": [
+      { "text": "It's almost midnight." },
+      { "key": "a", "text": "DANA: Tom, I'm tired. Are you coming?" }
+    ],
+    "checks": [
+      { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה"] },
+      { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף"] },
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה בא", "תבוא"] },
+      { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את באה", "תבואי"] }
+    ],
+    "reference": { "a": "דנה: טום, אני עייפה. אתה בא?" },
+    "wrong": { "a": "דנה: טום, אני עייף. את באה?" },
+    "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
+  },
+  {
+    "id": "sa-02",
+    "category": "speaker-addressee",
+    "description": "Male speaker (label) to a female addressee (name).",
+    "oracle": { "characters": [{ "name": "Mike", "gender": "male", "hebrewName": "מייק" }, { "name": "Jenny", "gender": "female", "hebrewName": "ג'ני" }] },
+    "cues": [
+      { "text": "I told you the bridge was closed." },
+      { "key": "a", "text": "MIKE: Jenny, I'm sorry. You're right." }
+    ],
+    "checks": [
+      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מצטער"] },
+      { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מצטערת"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"] },
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["צודק"] }
+    ],
+    "reference": { "a": "מייק: ג'ני, אני מצטער. את צודקת." },
+    "wrong": { "a": "מייק: ג'ני, אני מצטערת. אתה צודק." },
+    "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
+  },
+  {
+    "id": "sa-03",
+    "category": "speaker-addressee",
+    "description": "Same adjective for speaker and addressee with different genders.",
+    "oracle": { "characters": [{ "name": "Anna", "gender": "female", "hebrewName": "אנה" }, { "name": "David", "gender": "male", "hebrewName": "דייוויד" }] },
+    "cues": [
+      { "text": "The taxi is waiting downstairs." },
+      { "key": "a", "text": "ANNA: David, I'm ready. Are you ready?" }
+    ],
+    "checks": [
+      { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["אני מוכנה"] },
+      { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["אני מוכן"] },
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה מוכן"] },
+      { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את מוכנה"] }
+    ],
+    "reference": { "a": "אנה: דייוויד, אני מוכנה. אתה מוכן?" },
+    "wrong": { "a": "אנה: דייוויד, אני מוכן. את מוכנה?" },
+    "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
+  },
+  {
+    "id": "sa-04",
+    "category": "speaker-addressee",
+    "description": "Father (label) to his daughter: speaker adjective and addressee imperative.",
+    "cues": [
+      { "text": "You came all this way to see me?" },
+      { "key": "a", "text": "FATHER: My daughter, I'm happy you're here. Sit with me." }
+    ],
+    "checks": [
+      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["שמח", "מאושר"] },
+      { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["שמחה", "מאושרת"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שבי", "תשבי"] },
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שב", "תשב"] }
+    ],
+    "reference": { "a": "אבא: בתי, אני שמח שאת כאן. שבי איתי." },
+    "wrong": { "a": "אבא: בתי, אני שמחה שאתה כאן. שב איתי." },
+    "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
+  },
+  {
+    "id": "sa-05",
+    "category": "speaker-addressee",
+    "description": "Female nurse (label) to a man ('sir').",
+    "oracle": { "characters": [{ "name": "Maria", "gender": "female", "hebrewName": "מריה" }] },
+    "cues": [
+      { "text": "Nurse, I've been waiting for an hour." },
+      { "key": "a", "text": "MARIA: Sir, I'm busy. Wait here, please." }
+    ],
+    "checks": [
+      { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עסוקה", "טרודה"] },
+      { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עסוק", "טרוד"] },
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכה", "תחכה", "המתן", "תמתין"] },
+      { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכי", "תחכי", "המתיני", "תמתיני"] }
+    ],
+    "reference": { "a": "מריה: אדוני, אני עסוקה. חכה כאן, בבקשה." },
+    "wrong": { "a": "מריה: אדוני, אני עסוק. חכי כאן, בבקשה." },
+    "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
+  },
+  {
+    "id": "sa-06",
+    "category": "speaker-addressee",
+    "description": "Boy (label) to his mother.",
+    "oracle": { "characters": [{ "name": "Kevin", "gender": "male", "hebrewName": "קווין" }] },
+    "cues": [
+      { "text": "Something smells good in here." },
+      { "key": "a", "text": "KEVIN: Mom, I'm hungry. Are you cooking?" }
+    ],
+    "checks": [
+      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["רעב"] },
+      { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["רעבה"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["מבשלת"] },
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["מבשל"] }
+    ],
+    "reference": { "a": "קווין: אמא, אני רעב. את מבשלת?" },
+    "wrong": { "a": "קווין: אמא, אני רעבה. אתה מבשל?" },
+    "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
+  },
+  {
+    "id": "sa-07",
+    "category": "speaker-addressee",
+    "description": "Girl (label) to her grandfather; negative imperative.",
+    "oracle": { "characters": [{ "name": "Sophie", "gender": "female", "hebrewName": "סופי" }] },
+    "cues": [
+      { "text": "Your mother will be angry if you're late." },
+      { "key": "a", "text": "SOPHIE: Grandpa, I know. Don't worry." }
+    ],
+    "checks": [
+      { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יודעת"] },
+      { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יודע"] },
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["תדאג", "תדאיג"] },
+      { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["תדאגי", "תדאיגי"] }
+    ],
+    "reference": { "a": "סופי: סבא, אני יודעת. אל תדאג." },
+    "wrong": { "a": "סופי: סבא, אני יודע. אל תדאגי." },
+    "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
+  },
+  {
+    "id": "sa-08",
+    "category": "speaker-addressee",
+    "description": "Boy (label) to his aunt.",
+    "oracle": { "characters": [{ "name": "Leo", "gender": "male", "hebrewName": "ליאו" }, { "name": "Rita", "gender": "female", "aliases": ["Aunt Rita"], "hebrewName": "ריטה" }] },
+    "cues": [
+      { "text": "The storm is getting worse." },
+      { "key": "a", "text": "LEO: Aunt Rita, I'm scared. Can you stay?" }
+    ],
+    "checks": [
+      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מפחד", "פוחד", "מפוחד"] },
+      { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מפחדת", "פוחדת", "מפוחדת"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["יכולה", "תוכלי", "תישארי"] },
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["יכול", "תוכל", "תישאר"] }
+    ],
+    "reference": { "a": "ליאו: דודה ריטה, אני מפחד. את יכולה להישאר?" },
+    "wrong": { "a": "ליאו: דודה ריטה, אני מפחדת. אתה יכול להישאר?" },
+    "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
+  }
+]

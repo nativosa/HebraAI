@@ -1,0 +1,168 @@
+[
+  {
+    "id": "cc-01",
+    "category": "cross-chunk",
+    "description": "The addressee (Sarah) is established in chunk 1; the target is the first cue of chunk 2.",
+    "oracle": { "characters": [{ "name": "Sarah", "gender": "female", "hebrewName": "שרה" }, { "name": "Mark", "gender": "male", "hebrewName": "מארק" }] },
+    "cues": [
+      { "filler": 55 },
+      { "text": "SARAH: Mark, I can't do this anymore." },
+      { "text": "MARK: Sarah, look at me." },
+      { "text": "SARAH: I'm listening." },
+      { "filler": 2 },
+      { "key": "a", "text": "MARK: You're shaking." },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["רועדת"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["רועד"] }
+    ],
+    "reference": { "a": "מארק: את רועדת." },
+    "wrong": { "a": "מארק: אתה רועד." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "cc-02",
+    "category": "cross-chunk",
+    "description": "A group of girls is addressed in chunk 1; the plural question follows in chunk 2.",
+    "cues": [
+      { "filler": 56 },
+      { "text": "COACH: Girls, gather around." },
+      { "text": "COACH: This is our last practice before the final." },
+      { "filler": 2 },
+      { "key": "a", "text": "COACH: Are you ready?" },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "fem-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מוכנות"] },
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מוכנים", "מוכן", "מוכנה"] }
+    ],
+    "reference": { "a": "המאמנת: אתן מוכנות?" },
+    "wrong": { "a": "המאמנת: אתם מוכנים?" },
+    "wrongFails": ["fem-pl", "no-other"]
+  },
+  {
+    "id": "cc-03",
+    "category": "cross-chunk",
+    "description": "The speaker label 'STONE' is identified as Dr. Ella Stone only in chunk 1.",
+    "oracle": { "characters": [{ "name": "Ella Stone", "gender": "female", "aliases": ["Stone", "Dr. Stone"], "hebrewName": "אלה סטון" }] },
+    "cues": [
+      { "filler": 56 },
+      { "text": "Everyone, this is Dr. Ella Stone." },
+      { "text": "STONE: Thank you. Let's begin." },
+      { "filler": 2 },
+      { "key": "a", "text": "STONE: I'm sure the results are wrong." },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["בטוחה", "משוכנעת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["בטוח", "משוכנע"] }
+    ],
+    "reference": { "a": "סטון: אני בטוחה שהתוצאות שגויות." },
+    "wrong": { "a": "סטון: אני בטוח שהתוצאות שגויות." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "cc-04",
+    "category": "cross-chunk",
+    "description": "The speaker label 'LEE' is identified as Mr. Jordan Lee only in chunk 1.",
+    "oracle": { "characters": [{ "name": "Jordan Lee", "gender": "male", "aliases": ["Lee", "Mr. Lee"], "hebrewName": "ג'ורדן לי" }] },
+    "cues": [
+      { "filler": 56 },
+      { "text": "Mr. Jordan Lee will see you now." },
+      { "text": "LEE: Please, come in." },
+      { "filler": 2 },
+      { "key": "a", "text": "LEE: I'm ready to sign." },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מוכן"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מוכנה"] }
+    ],
+    "reference": { "a": "לי: אני מוכן לחתום." },
+    "wrong": { "a": "לי: אני מוכנה לחתום." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "cc-05",
+    "category": "cross-chunk",
+    "description": "Alex is referred to as 'he' only in chunk 1; the imperative follows in chunk 2.",
+    "oracle": { "characters": [{ "name": "Alex", "gender": "male", "hebrewName": "אלכס" }] },
+    "cues": [
+      { "filler": 56 },
+      { "text": "He's here. Tell him to come in." },
+      { "text": "ALEX: You wanted to see me?" },
+      { "filler": 2 },
+      { "key": "a", "text": "Sit down, Alex." },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שב", "תשב"] },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שבי", "תשבי"] }
+    ],
+    "reference": { "a": "שב, אלכס." },
+    "wrong": { "a": "שבי, אלכס." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "cc-06",
+    "category": "cross-chunk",
+    "description": "Jordan is referred to as 'she' only in chunk 1; the imperative follows in chunk 2.",
+    "oracle": { "characters": [{ "name": "Jordan", "gender": "female", "hebrewName": "ג'ורדן" }] },
+    "cues": [
+      { "filler": 56 },
+      { "text": "Is Jordan here?" },
+      { "text": "She's in the kitchen." },
+      { "filler": 2 },
+      { "key": "a", "text": "Jordan, wait for me!" },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכי", "תחכי"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכה", "תחכה"] }
+    ],
+    "reference": { "a": "ג'ורדן, חכי לי!" },
+    "wrong": { "a": "ג'ורדן, חכה לי!" },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "cc-07",
+    "category": "cross-chunk",
+    "description": "Both parents arrive in chunk 1; the plural question to them follows in chunk 2.",
+    "cues": [
+      { "filler": 57 },
+      { "text": "PARENTS: We're home!" },
+      { "filler": 2 },
+      { "key": "a", "text": "KID: Are you tired?" },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "masc-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["עייפים", "עיפים"] },
+      { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "עייפה", "עיפה", "עייפות"] }
+    ],
+    "reference": { "a": "ילד: אתם עייפים?" },
+    "wrong": { "a": "ילד: אתה עייף?" },
+    "wrongFails": ["masc-pl", "no-singular"]
+  },
+  {
+    "id": "cc-08",
+    "category": "cross-chunk",
+    "description": "Kim says 'I'm his sister' in chunk 1; her next line is in chunk 2.",
+    "oracle": { "characters": [{ "name": "Kim", "gender": "female", "hebrewName": "קים" }] },
+    "cues": [
+      { "filler": 56 },
+      { "text": "KIM: I'm the one who called you." },
+      { "text": "KIM: I'm his sister." },
+      { "filler": 2 },
+      { "key": "a", "text": "KIM: I'm worried about him." },
+      { "filler": 2 }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["דואגת", "מודאגת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["דואג", "מודאג"] }
+    ],
+    "reference": { "a": "קים: אני דואגת לו." },
+    "wrong": { "a": "קים: אני דואג לו." },
+    "wrongFails": ["fem", "no-masc"]
+  }
+]

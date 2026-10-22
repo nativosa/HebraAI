@@ -1,0 +1,228 @@
+[
+  {
+    "id": "adr-01",
+    "category": "addressee-gender",
+    "description": "Female addressee ('Mom'); imperative and 'you look'.",
+    "cues": [
+      { "text": "You've been standing all day." },
+      { "key": "a", "text": "Mom, sit down. You look tired." }
+    ],
+    "checks": [
+      { "id": "imp-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שבי", "תשבי"] },
+      { "id": "imp-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שב", "תשב"] },
+      { "id": "look-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["אתה נראה", "נראה עייף"] }
+    ],
+    "reference": { "a": "אמא, שבי. את נראית עייפה." },
+    "wrong": { "a": "אמא, שב. אתה נראה עייף." },
+    "wrongFails": ["imp-fem", "imp-no-masc", "look-no-masc"]
+  },
+  {
+    "id": "adr-02",
+    "category": "addressee-gender",
+    "description": "Male addressee ('Dad'); 'are you coming'.",
+    "cues": [
+      { "text": "We're leaving for the lake in ten minutes." },
+      { "key": "a", "text": "Dad, are you coming with us?" }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה בא", "תבוא", "מצטרף"] },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את באה", "תבואי", "מצטרפת"] }
+    ],
+    "reference": { "a": "אבא, אתה בא איתנו?" },
+    "wrong": { "a": "אבא, את באה איתנו?" },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "adr-03",
+    "category": "addressee-gender",
+    "description": "Female addressee by name; imperative 'listen'.",
+    "cues": [
+      { "text": "I don't want to hear it." },
+      { "key": "a", "text": "Sarah, listen to me." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["תקשיבי", "הקשיבי", "שמעי", "תשמעי"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["תקשיב", "הקשב", "שמע", "תשמע"] }
+    ],
+    "reference": { "a": "שרה, תקשיבי לי." },
+    "wrong": { "a": "שרה, תקשיב לי." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "adr-04",
+    "category": "addressee-gender",
+    "description": "Male addressee ('Mr.'); 'are you sure'.",
+    "cues": [
+      { "text": "I'd like to withdraw all my savings." },
+      { "key": "a", "text": "Mr. Cohen, are you sure?" }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["בטוח"] },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["בטוחה"] }
+    ],
+    "reference": { "a": "מר כהן, אתה בטוח?" },
+    "wrong": { "a": "מר כהן, את בטוחה?" },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "adr-05",
+    "category": "addressee-gender",
+    "description": "Female addressee ('Mrs.'); 'are you okay' (neutral phrasing allowed).",
+    "cues": [
+      { "text": "Careful, the floor is wet!" },
+      { "key": "a", "text": "Mrs. Levi, are you okay?" }
+    ],
+    "checks": [
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["אתה בסדר"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a"] }
+    ],
+    "reference": { "a": "גברת לוי, את בסדר?" },
+    "wrong": { "a": "גברת לוי, אתה בסדר?" },
+    "wrongFails": ["no-masc"]
+  },
+  {
+    "id": "adr-06",
+    "category": "addressee-gender",
+    "description": "Female addressee ('Grandma'); imperative 'wait'.",
+    "cues": [
+      { "text": "I'm going to the market." },
+      { "key": "a", "text": "Grandma, wait for me!" }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכי", "תחכי", "המתיני", "תמתיני"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכה", "תחכה", "המתן", "תמתין"] }
+    ],
+    "reference": { "a": "סבתא, חכי לי!" },
+    "wrong": { "a": "סבתא, חכה לי!" },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "adr-07",
+    "category": "addressee-gender",
+    "description": "Male addressee ('Sir'); 'do you know'.",
+    "cues": [
+      { "text": "Excuse me, I'm lost." },
+      { "key": "a", "text": "Sir, do you know where the train station is?" }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה יודע", "תוכל", "תדע"] },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את יודעת", "תוכלי", "תדעי"] }
+    ],
+    "reference": { "a": "אדוני, אתה יודע איפה תחנת הרכבת?" },
+    "wrong": { "a": "אדוני, את יודעת איפה תחנת הרכבת?" },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "adr-08",
+    "category": "addressee-gender",
+    "description": "Female addressee ('Ma'am'); 'you can't' (impersonal phrasing allowed).",
+    "cues": [
+      { "text": "I'll only be a minute." },
+      { "key": "a", "text": "Ma'am, you can't park here." }
+    ],
+    "checks": [
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["אתה לא יכול", "אינך יכול", "אתה יכול"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a"] }
+    ],
+    "reference": { "a": "גברתי, את לא יכולה לחנות כאן." },
+    "wrong": { "a": "גברתי, אתה לא יכול לחנות כאן." },
+    "wrongFails": ["no-masc"]
+  },
+  {
+    "id": "adr-09",
+    "category": "addressee-gender",
+    "description": "Female addressee by name; 'you're right'.",
+    "cues": [
+      { "text": "We should have taken the other road." },
+      { "key": "a", "text": "Lucy, you're right." }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["צודק"] }
+    ],
+    "reference": { "a": "לוסי, את צודקת." },
+    "wrong": { "a": "לוסי, אתה צודק." },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "adr-10",
+    "category": "addressee-gender",
+    "description": "Male addressee by name, gendered by a preceding pronoun; imperative 'calm down'.",
+    "cues": [
+      { "text": "Ben is yelling at the waiter again. He's furious." },
+      { "key": "a", "text": "Ben, calm down!" }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["תירגע", "תרגע", "הירגע", "תתרגע"] },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["תירגעי", "תרגעי", "הירגעי", "תתרגעי"] }
+    ],
+    "reference": { "a": "בן, תירגע!" },
+    "wrong": { "a": "בן, תירגעי!" },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "adr-11",
+    "category": "addressee-gender",
+    "description": "Female addressee (a girl named in the previous cue); 'are you hungry'.",
+    "cues": [
+      { "text": "Hi, sweetie. What's your name?" },
+      { "text": "Maya. I'm six." },
+      { "key": "a", "text": "Are you hungry, Maya?" }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["רעבה"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["רעב"] }
+    ],
+    "reference": { "a": "את רעבה, מאיה?" },
+    "wrong": { "a": "אתה רעב, מאיה?" },
+    "wrongFails": ["fem", "no-masc"]
+  },
+  {
+    "id": "adr-12",
+    "category": "addressee-gender",
+    "description": "Male addressee ('son'); imperative 'look at me'.",
+    "cues": [
+      { "text": "I didn't mean to break it." },
+      { "key": "a", "text": "Son, look at me." }
+    ],
+    "checks": [
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["תסתכל", "הסתכל", "הבט", "תביט"] },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["תסתכלי", "הסתכלי", "הביטי", "תביטי"] }
+    ],
+    "reference": { "a": "בני, תסתכל עליי." },
+    "wrong": { "a": "בני, תסתכלי עליי." },
+    "wrongFails": ["masc", "no-fem"]
+  },
+  {
+    "id": "adr-13",
+    "category": "addressee-gender",
+    "description": "Female addressee by name; 'you're beautiful'.",
+    "cues": [
+      { "text": "Anna, is that the dress for tonight?" },
+      { "key": "a", "text": "Anna, you're beautiful." }
+    ],
+    "checks": [
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["אתה יפה", "אתה נראה"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a"] }
+    ],
+    "reference": { "a": "אנה, את יפהפייה." },
+    "wrong": { "a": "אנה, אתה יפה." },
+    "wrongFails": ["no-masc"]
+  },
+  {
+    "id": "adr-14",
+    "category": "addressee-gender",
+    "description": "Female addressee (doctor with a female first name); 'what do you recommend'.",
+    "cues": [
+      { "text": "The scan came back this morning." },
+      { "key": "a", "text": "Dr. Rachel Klein, what do you recommend?" }
+    ],
+    "checks": [
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["ממליצה", "מציעה"] },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["ממליץ", "מציע"] }
+    ],
+    "reference": { "a": "ד\"ר רחל קליין, מה את ממליצה?" },
+    "wrong": { "a": "ד\"ר רחל קליין, מה אתה ממליץ?" },
+    "wrongFails": ["fem", "no-masc"]
+  }
+]

@@ -1,0 +1,129 @@
+[
+  {
+    "id": "alt-01",
+    "category": "alternating-unlabeled",
+    "description": "A man and a woman are introduced, then alternate without labels. Speakers stay unknown: either gender is accepted per line, but no name may be attached to an unlabeled line.",
+    "oracle": { "characters": [{ "name": "John", "gender": "male", "hebrewName": "ג'ון" }, { "name": "Mary", "gender": "female", "hebrewName": "מרי" }] },
+    "cues": [
+      { "text": "John, this is Mary. Mary, this is John." },
+      { "text": "Nice to meet you." },
+      { "key": "a", "text": "I'm a little nervous." },
+      { "key": "b", "text": "Don't be. I'm nervous too." },
+      { "key": "c", "text": "Are you hungry?" }
+    ],
+    "checks": [
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["ג'ון", "גון", "מרי", "מרים"] },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["ג'ון", "גון", "מרי", "מרים"] },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["ג'ון", "גון", "מרי", "מרים"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "אני קצת לחוץ.", "b": "אל תהיה. גם אני לחוצה.", "c": "אתה רעב?" },
+    "wrong": { "a": "אני קצת לחוץ.", "b": "מרי: אל תהיה. גם אני לחוצה.", "c": "אתה רעב?" },
+    "wrongFails": ["no-name-b"]
+  },
+  {
+    "id": "alt-02",
+    "category": "alternating-unlabeled",
+    "description": "A waiter greets a couple by name; the couple's lines are unlabeled.",
+    "oracle": { "characters": [{ "name": "Sarah", "gender": "female", "hebrewName": "שרה" }, { "name": "Dan", "gender": "male", "hebrewName": "דן" }] },
+    "cues": [
+      { "text": "WAITER: Good evening, Sarah. Good evening, Dan." },
+      { "key": "a", "text": "I'm starving." },
+      { "key": "b", "text": "Me too. Are you ready to order?" },
+      { "key": "c", "text": "I'm ready." }
+    ],
+    "checks": [
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["שרה", "דן"] },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["שרה", "דן"] },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["שרה", "דן"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "אני מורעב.", "b": "גם אני. את מוכנה להזמין?", "c": "אני מוכנה." },
+    "wrong": { "a": "אני מורעב.", "b": "גם אני. את מוכנה להזמין?", "c": "שרה: אני מוכנה." },
+    "wrongFails": ["no-name-c"]
+  },
+  {
+    "id": "alt-03",
+    "category": "alternating-unlabeled",
+    "description": "A sister and a brother are called to dinner; their replies are unlabeled. (Names chosen not to collide with Hebrew words.)",
+    "oracle": { "characters": [{ "name": "Leah", "gender": "female", "hebrewName": "לאה" }, { "name": "Ryan", "gender": "male", "hebrewName": "ראיין" }] },
+    "cues": [
+      { "text": "Leah! Ryan! Dinner is ready!" },
+      { "key": "a", "text": "I'm not hungry." },
+      { "key": "b", "text": "You never are." },
+      { "key": "c", "text": "I'm sick of this." }
+    ],
+    "checks": [
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["לאה", "ראיין", "ריאן", "רייאן"] },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["לאה", "ראיין", "ריאן", "רייאן"] },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["לאה", "ראיין", "ריאן", "רייאן"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "אני לא רעבה.", "b": "את אף פעם לא רעבה.", "c": "נמאס לי מזה." },
+    "wrong": { "a": "לאה: אני לא רעבה.", "b": "את אף פעם לא רעבה.", "c": "נמאס לי מזה." },
+    "wrongFails": ["no-name-a"]
+  },
+  {
+    "id": "alt-04",
+    "category": "alternating-unlabeled",
+    "description": "A phone call: only the first line identifies its speaker; the rest alternate unlabeled.",
+    "oracle": { "characters": [{ "name": "Kate", "gender": "female", "hebrewName": "קייט" }, { "name": "Max", "gender": "male", "hebrewName": "מקס" }] },
+    "cues": [
+      { "text": "Hi, Max. It's Kate." },
+      { "key": "a", "text": "Are you home?" },
+      { "key": "b", "text": "I'm still at the office." },
+      { "key": "c", "text": "I'll be there soon." }
+    ],
+    "checks": [
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["קייט", "קיית", "מקס"] },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["קייט", "קיית", "מקס"] },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["קייט", "קיית", "מקס"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "אתה בבית?", "b": "אני עדיין במשרד.", "c": "אני אגיע בקרוב." },
+    "wrong": { "a": "אתה בבית?", "b": "מקס: אני עדיין במשרד.", "c": "אני אגיע בקרוב." },
+    "wrongFails": ["no-name-b"]
+  },
+  {
+    "id": "alt-05",
+    "category": "alternating-unlabeled",
+    "description": "Old friends meet after an introduction by a third person; replies unlabeled.",
+    "oracle": { "characters": [{ "name": "Tom", "gender": "male", "hebrewName": "טום" }, { "name": "Rose", "gender": "female", "hebrewName": "רוז" }] },
+    "cues": [
+      { "text": "Tom, you remember Rose?" },
+      { "key": "a", "text": "Of course. You look great." },
+      { "key": "b", "text": "Thank you. You haven't changed." },
+      { "key": "c", "text": "I'm glad you came." }
+    ],
+    "checks": [
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["טום", "רוז", "ורד"] },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["טום", "רוז", "ורד"] },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["טום", "רוז", "ורד"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "ברור. את נראית נהדר.", "b": "תודה. לא השתנית.", "c": "אני שמחה שבאת." },
+    "wrong": { "a": "ברור. את נראית נהדר.", "b": "תודה. לא השתנית.", "c": "רוז: אני שמחה שבאת." },
+    "wrongFails": ["no-name-c"]
+  },
+  {
+    "id": "alt-06",
+    "category": "alternating-unlabeled",
+    "description": "Only the opening line is labeled; the argument continues unlabeled.",
+    "oracle": { "characters": [{ "name": "Omar", "gender": "male", "hebrewName": "עומר" }, { "name": "Dana", "gender": "female", "hebrewName": "דנה" }] },
+    "cues": [
+      { "text": "OMAR: Dana, we need to talk." },
+      { "key": "a", "text": "I know." },
+      { "key": "b", "text": "You're always busy." },
+      { "key": "c", "text": "I'm sorry." }
+    ],
+    "checks": [
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["עומר", "דנה"] },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["עומר", "דנה"] },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["עומר", "דנה"] },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "אני יודעת.", "b": "אתה תמיד עסוק.", "c": "אני מצטערת." },
+    "wrong": { "a": "דנה: אני יודעת.", "b": "אתה תמיד עסוק.", "c": "אני מצטערת." },
+    "wrongFails": ["no-name-a"]
+  }
+]

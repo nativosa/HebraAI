@@ -1,0 +1,139 @@
+[
+  {
+    "id": "amb-01",
+    "category": "ambiguous",
+    "description": "Unknown speaker continues across two cues; either gender, but consistent (neutral allowed).",
+    "cues": [
+      { "text": "Where have you been all day?" },
+      { "key": "a", "text": "I'm tired..." },
+      { "key": "b", "text": "...and I'm hungry." }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["עייף", "עיף", "רעב"], "f": ["עייפה", "עיפה", "רעבה"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "אני עייף...", "b": "...ואני רעב." },
+    "wrong": { "a": "אני עייפה...", "b": "...ואני רעב." },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-02",
+    "category": "ambiguous",
+    "description": "Unknown addressee across two cues of one sentence; consistent gender.",
+    "cues": [
+      { "text": "The interview starts in a minute." },
+      { "key": "a", "text": "Are you ready?..." },
+      { "key": "b", "text": "...Because you look nervous." }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["מוכן", "לחוץ", "מתוח", "עצבני", "נראה"], "f": ["מוכנה", "לחוצה", "מתוחה", "עצבנית", "נראית"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "את מוכנה?...", "b": "...כי את נראית לחוצה." },
+    "wrong": { "a": "את מוכנה?...", "b": "...כי אתה נראה לחוץ." },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-03",
+    "category": "ambiguous",
+    "description": "Unknown speaker over three continuation cues.",
+    "cues": [
+      { "text": "You don't have to do this." },
+      { "key": "a", "text": "I'm sure..." },
+      { "key": "b", "text": "...I'm ready..." },
+      { "key": "c", "text": "...and I'm not scared." }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b", "c"], "allowNeutral": true, "groups": { "m": ["בטוח", "מוכן", "מפחד", "פוחד"], "f": ["בטוחה", "מוכנה", "מפחדת", "פוחדת"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
+    ],
+    "reference": { "a": "אני בטוחה...", "b": "...אני מוכנה...", "c": "...ואני לא מפחדת." },
+    "wrong": { "a": "אני בטוחה...", "b": "...אני מוכן...", "c": "...ואני לא מפחדת." },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-04",
+    "category": "ambiguous",
+    "description": "Phone call to an unknown person; addressee consistent across two cues.",
+    "cues": [
+      { "text": "Hello? Who is this?" },
+      { "key": "a", "text": "Are you still there?..." },
+      { "key": "b", "text": "...Can you hear me?" }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["אתה עדיין", "אתה שומע", "שומע אותי"], "f": ["את עדיין", "את שומעת", "שומעת אותי"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "אתה עדיין שם?...", "b": "...אתה שומע אותי?" },
+    "wrong": { "a": "אתה עדיין שם?...", "b": "...את שומעת אותי?" },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-05",
+    "category": "ambiguous",
+    "description": "Unknown addressee; a neutral first cue and a gendered second cue are consistent.",
+    "cues": [
+      { "text": "The door opens. It's pouring outside." },
+      { "key": "a", "text": "You're late..." },
+      { "key": "b", "text": "...and you're soaking wet." }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["מאחר", "רטוב", "ספוג"], "f": ["מאחרת", "רטובה", "ספוגה"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "איחרת...", "b": "...ואתה רטוב לגמרי." },
+    "wrong": { "a": "את מאחרת...", "b": "...ואתה רטוב לגמרי." },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-06",
+    "category": "ambiguous",
+    "description": "Unknown speaker apologising across two cues.",
+    "cues": [
+      { "text": "You spilled coffee on my report." },
+      { "key": "a", "text": "I'm sorry..." },
+      { "key": "b", "text": "...I'm so embarrassed." }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["מצטער", "נבוך", "מובך", "מתבייש"], "f": ["מצטערת", "נבוכה", "מובכת", "מתביישת"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "אני מצטער...", "b": "...אני כל כך נבוך." },
+    "wrong": { "a": "אני מצטער...", "b": "...אני כל כך נבוכה." },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-07",
+    "category": "ambiguous",
+    "description": "Unknown addressee woken at night; consistent across two cues.",
+    "cues": [
+      { "text": "It's three in the morning." },
+      { "key": "a", "text": "Are you awake?..." },
+      { "key": "b", "text": "...Are you okay?" }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["אתה ער", "אתה בסדר"], "f": ["את ערה", "את בסדר"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "אתה ער?...", "b": "...אתה בסדר?" },
+    "wrong": { "a": "את ערה?...", "b": "...אתה בסדר?" },
+    "wrongFails": ["same"]
+  },
+  {
+    "id": "amb-08",
+    "category": "ambiguous",
+    "description": "Unknown speaker released from prison; consistent across two cues.",
+    "cues": [
+      { "text": "Your papers are signed. You can go." },
+      { "key": "a", "text": "I can't believe it..." },
+      { "key": "b", "text": "...I'm finally free." }
+    ],
+    "checks": [
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["מאמין", "חופשי", "משוחרר"], "f": ["מאמינה", "חופשייה", "חופשיה", "משוחררת"] } },
+      { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
+    ],
+    "reference": { "a": "אני לא מאמינה...", "b": "...אני סוף סוף חופשייה." },
+    "wrong": { "a": "אני לא מאמינה...", "b": "...אני סוף סוף חופשי." },
+    "wrongFails": ["same"]
+  }
+]

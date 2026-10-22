@@ -1,0 +1,96 @@
+[
+  {
+    "id": "mn-01",
+    "category": "meaning",
+    "description": "A time is preserved.",
+    "cues": [
+      { "text": "When should we meet?" },
+      { "key": "a", "text": "Meet me at 7:30 tomorrow." }
+    ],
+    "checks": [
+      { "id": "time", "dimension": "meaning", "type": "preserve", "cue": "a", "values": ["7:30"] },
+      { "id": "tomorrow", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["מחר"] }
+    ],
+    "reference": { "a": "תפגוש אותי מחר ב-7:30." },
+    "wrong": { "a": "תפגוש אותי מחר ב-8:30." },
+    "wrongFails": ["time"]
+  },
+  {
+    "id": "mn-02",
+    "category": "meaning",
+    "description": "An amount is preserved.",
+    "cues": [
+      { "text": "How much is the jacket?" },
+      { "key": "a", "text": "It costs 250 dollars." }
+    ],
+    "checks": [
+      { "id": "amount", "dimension": "meaning", "type": "preserve", "cue": "a", "values": ["250"] },
+      { "id": "currency", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["דולר", "דולרים"] }
+    ],
+    "reference": { "a": "הוא עולה 250 דולר." },
+    "wrong": { "a": "הוא עולה 25 דולר." },
+    "wrongFails": ["amount"]
+  },
+  {
+    "id": "mn-03",
+    "category": "meaning",
+    "description": "'Never' (negation) is preserved.",
+    "cues": [
+      { "text": "You told everyone I was lying." },
+      { "key": "a", "text": "I never said that." }
+    ],
+    "checks": [
+      { "id": "negation", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["אף פעם", "מעולם", "לעולם לא", "לא אמרתי"] }
+    ],
+    "reference": { "a": "אף פעם לא אמרתי את זה." },
+    "wrong": { "a": "אמרתי את זה." },
+    "wrongFails": ["negation"]
+  },
+  {
+    "id": "mn-04",
+    "category": "meaning",
+    "description": "Idiom 'break a leg' is not translated literally.",
+    "cues": [
+      { "text": "The curtain goes up in five minutes." },
+      { "key": "a", "text": "Break a leg tonight!" }
+    ],
+    "checks": [
+      { "id": "not-literal", "dimension": "meaning", "type": "noneOf", "cue": "a", "forms": ["רגל", "רגליים"] },
+      { "id": "sense", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בהצלחה", "שיהיה בהצלחה", "תצליח", "תצליחי", "תצליחו"] }
+    ],
+    "reference": { "a": "בהצלחה הערב!" },
+    "wrong": { "a": "תשבור רגל הערב!" },
+    "wrongFails": ["not-literal", "sense"]
+  },
+  {
+    "id": "mn-05",
+    "category": "meaning",
+    "description": "Idiom 'raining cats and dogs' is not translated literally.",
+    "cues": [
+      { "text": "Did you bring an umbrella?" },
+      { "key": "a", "text": "It's raining cats and dogs out there." }
+    ],
+    "checks": [
+      { "id": "not-literal", "dimension": "meaning", "type": "noneOf", "cue": "a", "forms": ["חתולים", "כלבים"] },
+      { "id": "rain", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["גשם", "גשמים", "יורד", "שוטף", "מבול"] }
+    ],
+    "reference": { "a": "יורד שם גשם זלעפות." },
+    "wrong": { "a": "יורד שם גשם של חתולים וכלבים." },
+    "wrongFails": ["not-literal"]
+  },
+  {
+    "id": "mn-06",
+    "category": "meaning",
+    "description": "'Under any circumstances' with a prohibition keeps the absolute negation.",
+    "cues": [
+      { "text": "He'll knock on the door tonight." },
+      { "key": "a", "text": "Don't let him in, under any circumstances." }
+    ],
+    "checks": [
+      { "id": "absolute", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בשום מקרה", "בשום פנים", "בשום אופן", "בשום תנאי", "בשום מצב"] }
+    ],
+    "reference": { "a": "אל תכניס אותו, בשום מקרה." },
+    "wrong": { "a": "תכניס אותו, בכל מקרה." },
+    "wrongFails": ["absolute"]
+  }
+]
