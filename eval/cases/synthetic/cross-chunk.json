@@ -97,8 +97,8 @@
       { "filler": 2 }
     ],
     "checks": [
-      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שב", "תשב"] },
-      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שבי", "תשבי"] }
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שב", "תשב"], "prefixes": "ו" },
+      { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שבי", "תשבי"], "prefixes": "ו" }
     ],
     "reference": { "a": "שב, אלכס." },
     "wrong": { "a": "שבי, אלכס." },
@@ -118,8 +118,8 @@
       { "filler": 2 }
     ],
     "checks": [
-      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכי", "תחכי"] },
-      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכה", "תחכה"] }
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכי", "תחכי"], "prefixes": "ו" },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכה", "תחכה"], "prefixes": "ו" }
     ],
     "reference": { "a": "ג'ורדן, חכי לי!" },
     "wrong": { "a": "ג'ורדן, חכה לי!" },

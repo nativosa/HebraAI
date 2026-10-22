@@ -11,10 +11,11 @@
     "checks": [
       { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה"] },
       { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף"] },
-      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה בא", "תבוא"] },
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה בא", "תבוא", "אתה מגיע", "מצטרף"] },
       { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את באה", "תבואי"] }
     ],
     "reference": { "a": "דנה: טום, אני עייפה. אתה בא?" },
+    "accepted": [{ "a": "דנה: טום, אני עייפה. אתה מגיע?" }],
     "wrong": { "a": "דנה: טום, אני עייף. את באה?" },
     "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
   },
@@ -28,12 +29,13 @@
       { "key": "a", "text": "MIKE: Jenny, I'm sorry. You're right." }
     ],
     "checks": [
-      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מצטער"] },
+      { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מצטער"], "neutral": ["סליחה"] },
       { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מצטערת"] },
-      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"], "neutral": ["צדקת"] },
       { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["צודק"] }
     ],
     "reference": { "a": "מייק: ג'ני, אני מצטער. את צודקת." },
+    "accepted": [{ "a": "מייק: ג'ני, סליחה. צדקת." }],
     "wrong": { "a": "מייק: ג'ני, אני מצטערת. אתה צודק." },
     "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
   },
@@ -49,10 +51,11 @@
     "checks": [
       { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["אני מוכנה"] },
       { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["אני מוכן"] },
-      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה מוכן"] },
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה מוכן", "ואתה"] },
       { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את מוכנה"] }
     ],
     "reference": { "a": "אנה: דייוויד, אני מוכנה. אתה מוכן?" },
+    "accepted": [{ "a": "אנה: דייוויד, אני מוכנה. ואתה?" }],
     "wrong": { "a": "אנה: דייוויד, אני מוכן. את מוכנה?" },
     "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
   },
@@ -67,8 +70,8 @@
     "checks": [
       { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["שמח", "מאושר"] },
       { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["שמחה", "מאושרת"] },
-      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שבי", "תשבי"] },
-      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שב", "תשב"] }
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שבי", "תשבי"], "prefixes": "ו" },
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שב", "תשב"], "prefixes": "ו" }
     ],
     "reference": { "a": "אבא: בתי, אני שמח שאת כאן. שבי איתי." },
     "wrong": { "a": "אבא: בתי, אני שמחה שאתה כאן. שב איתי." },
@@ -86,10 +89,11 @@
     "checks": [
       { "id": "spk-fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עסוקה", "טרודה"] },
       { "id": "spk-no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עסוק", "טרוד"] },
-      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכה", "תחכה", "המתן", "תמתין"] },
-      { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכי", "תחכי", "המתיני", "תמתיני"] }
+      { "id": "adr-masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכה", "תחכה", "המתן", "תמתין"], "prefixes": "ו" },
+      { "id": "adr-no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכי", "תחכי", "המתיני", "תמתיני"], "prefixes": "ו" }
     ],
     "reference": { "a": "מריה: אדוני, אני עסוקה. חכה כאן, בבקשה." },
+    "accepted": [{ "a": "מריה: אדוני, אני עסוקה. תחכה כאן, בבקשה." }],
     "wrong": { "a": "מריה: אדוני, אני עסוק. חכי כאן, בבקשה." },
     "wrongFails": ["spk-fem", "spk-no-masc", "adr-masc", "adr-no-fem"]
   },

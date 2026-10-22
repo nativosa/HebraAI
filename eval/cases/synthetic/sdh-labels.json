@@ -10,10 +10,11 @@
       { "key": "a", "text": "(MARY) I'm tired." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה", "מותשת"] },
-      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "מותש"] }
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה", "מותשת", "מתה מעייפות"], "neutral": ["אין לי כוח"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "מותש", "מת מעייפות"] }
     ],
     "reference": { "a": "אני עייפה." },
+    "accepted": [{ "a": "אני מתה מעייפות." }, { "a": "אין לי כוח." }],
     "wrong": { "a": "אני עייף." },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -45,10 +46,11 @@
       { "key": "a", "text": "(GRANDMA) I'm so happy to see you." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["שמחה", "מאושרת"] },
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["שמחה", "מאושרת"], "neutral": ["כיף לראות"] },
       { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["שמח", "מאושר"] }
     ],
     "reference": { "a": "אני כל כך שמחה לראות אתכם." },
+    "accepted": [{ "a": "איזה כיף לראות אתכם." }],
     "wrong": { "a": "אני כל כך שמח לראות אתכם." },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -65,10 +67,11 @@
     "checks": [
       { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יודע"] },
       { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יודעת"] },
-      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"] },
+      { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"], "neutral": ["צדקת"] },
       { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["צודק"] }
     ],
     "reference": { "a": "אני יודע, שרה. את צודקת." },
+    "accepted": [{ "a": "אני יודע, שרה. צדקת." }],
     "wrong": { "a": "אני יודעת, שרה. אתה צודק." },
     "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
   }

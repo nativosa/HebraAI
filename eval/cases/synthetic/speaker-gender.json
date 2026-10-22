@@ -9,10 +9,11 @@
       { "key": "a", "text": "RACHEL: I'm so tired. I worked a double shift." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה", "מותשת", "גמורה", "סחוטה", "הרוגה"] },
-      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "מותש", "גמור", "סחוט", "הרוג"] }
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עייפה", "עיפה", "מותשת", "גמורה", "סחוטה", "הרוגה", "מתה מעייפות"], "neutral": ["אין לי כוח"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "מותש", "גמור", "סחוט", "הרוג", "מת מעייפות"] }
     ],
     "reference": { "a": "רייצ'ל: אני כל כך עייפה. עבדתי משמרת כפולה." },
+    "accepted": [{ "a": "רייצ'ל: אני מתה מעייפות. עבדתי משמרת כפולה." }, { "a": "רייצ'ל: אין לי כוח. עבדתי משמרת כפולה." }],
     "wrong": { "a": "רייצ'ל: אני כל כך עייף. עבדתי משמרת כפולה." },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -91,10 +92,11 @@
       { "key": "a", "text": "JAMES: I'm hungry. Is there anything to eat now?" }
     ],
     "checks": [
-      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["רעב"] },
-      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["רעבה"] }
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["רעב", "גווע ברעב", "מת מרעב"] },
+      { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["רעבה", "גוועת ברעב", "מתה מרעב"] }
     ],
     "reference": { "a": "ג'יימס: אני רעב. יש משהו לאכול עכשיו?" },
+    "accepted": [{ "a": "ג'יימס: אני מת מרעב. יש משהו לאכול עכשיו?" }],
     "wrong": { "a": "ג'יימס: אני רעבה. יש משהו לאכול עכשיו?" },
     "wrongFails": ["masc", "no-fem"]
   },
@@ -108,10 +110,11 @@
       { "key": "a", "text": "EMMA: I'm sure he'll call tonight." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["בטוחה"] },
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["בטוחה"], "neutral": ["ברור לי"] },
       { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["בטוח"] }
     ],
     "reference": { "a": "אמה: אני בטוחה שהוא יתקשר הערב." },
+    "accepted": [{ "a": "אמה: ברור לי שהוא יתקשר הערב." }],
     "wrong": { "a": "אמה: אני בטוח שהוא יתקשר הערב." },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -159,10 +162,11 @@
       { "key": "a", "text": "PAUL: I think we should call the police." }
     ],
     "checks": [
-      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["חושב", "סבור", "מציע"] },
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["חושב", "סבור", "מציע"], "neutral": ["נראה לי"] },
       { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["חושבת", "סבורה", "מציעה"] }
     ],
     "reference": { "a": "פול: אני חושב שכדאי שנתקשר למשטרה." },
+    "accepted": [{ "a": "פול: נראה לי שכדאי שנתקשר למשטרה." }],
     "wrong": { "a": "פול: אני חושבת שכדאי שנתקשר למשטרה." },
     "wrongFails": ["masc", "no-fem"]
   },
@@ -193,10 +197,11 @@
       { "key": "a", "text": "SAM: I'm busy right now. I'll get back to you later." }
     ],
     "checks": [
-      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עסוק", "טרוד"] },
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["עסוק", "טרוד"], "neutral": ["אין לי זמן"] },
       { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["עסוקה", "טרודה"] }
     ],
     "reference": { "a": "סאם: אני עסוק כרגע. אחזור אליך אחר כך." },
+    "accepted": [{ "a": "סאם: אין לי זמן כרגע. אחזור אליך אחר כך." }],
     "wrong": { "a": "סאם: אני עסוקה כרגע. אחזור אליך אחר כך." },
     "wrongFails": ["masc", "no-fem"]
   },
@@ -209,10 +214,11 @@
       { "key": "a", "text": "MOM: I can't sleep." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יכולה", "מצליחה", "מסוגלת"] },
-      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יכול", "מצליח", "מסוגל"] }
+      { "id": "fem", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["יכולה", "מצליחה", "מסוגלת", "נרדמת"] },
+      { "id": "no-masc", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["יכול", "מצליח", "מסוגל", "נרדם"] }
     ],
     "reference": { "a": "אמא: אני לא מצליחה לישון." },
+    "accepted": [{ "a": "אמא: אני לא נרדמת." }],
     "wrong": { "a": "אמא: אני לא מצליח לישון." },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -225,11 +231,12 @@
       { "key": "a", "text": "GRANDPA: I've been married for forty years." }
     ],
     "checks": [
-      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["נשוי"] },
+      { "id": "masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["נשוי"], "neutral": ["נשואים"] },
       { "id": "no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["נשואה"] },
       { "id": "forty", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["ארבעים", "40"] }
     ],
     "reference": { "a": "סבא: אני נשוי כבר ארבעים שנה." },
+    "accepted": [{ "a": "סבא: אנחנו נשואים כבר ארבעים שנה." }],
     "wrong": { "a": "סבא: אני נשואה כבר ארבעים שנה." },
     "wrongFails": ["masc", "no-fem"]
   }

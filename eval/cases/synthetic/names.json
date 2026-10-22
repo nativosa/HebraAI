@@ -99,7 +99,7 @@
       { "key": "c", "text": "Michael, wait!" }
     ],
     "checks": [
-      { "id": "same-spelling", "dimension": "names", "type": "sameGroup", "cues": ["a", "b", "c"], "groups": { "maykel": ["מייקל", "מיקל", "מייקאל", "מאייקל"], "mikhael": ["מיכאל"] } }
+      { "id": "same-spelling", "dimension": "names", "type": "sameGroup", "cues": ["a", "b", "c"], "groups": { "maykel": ["מייקל", "מיקל", "מייקאל", "מאייקל"], "mikhael": ["מיכאל"] }, "ignoreGeresh": true }
     ],
     "reference": { "a": "מייקל כאן.", "b": "מישהו ראה את מייקל?", "c": "מייקל, חכה!" },
     "wrong": { "a": "מייקל כאן.", "b": "מישהו ראה את מיכאל?", "c": "מייקל, חכה!" },
@@ -116,9 +116,10 @@
       { "key": "b", "text": "Katherine says hello." }
     ],
     "checks": [
-      { "id": "same-spelling", "dimension": "names", "type": "sameGroup", "cues": ["a", "b"], "groups": { "katrin": ["קתרין"], "kat-rin": ["קת'רין"], "kaatrin": ["קאתרין"], "katerin": ["קטרין", "קטרין"], "katrina": ["קתרינה", "קטרינה"] } }
+      { "id": "same-spelling", "dimension": "names", "type": "sameGroup", "cues": ["a", "b"], "ignoreGeresh": true, "groups": { "katrin": ["קתרין"], "kaatrin": ["קאתרין"], "katerin": ["קטרין"], "katrina": ["קתרינה", "קטרינה"] } }
     ],
     "reference": { "a": "קתרין התקשרה הבוקר.", "b": "קתרין מוסרת ד\"ש." },
+    "accepted": [{ "a": "קתרין התקשרה הבוקר.", "b": "קת'רין מוסרת ד\"ש." }],
     "wrong": { "a": "קתרין התקשרה הבוקר.", "b": "קאתרין מוסרת ד\"ש." },
     "wrongFails": ["same-spelling"]
   },

@@ -8,10 +8,11 @@
       { "key": "a", "text": "Meet me at 7:30 tomorrow." }
     ],
     "checks": [
-      { "id": "time", "dimension": "meaning", "type": "preserve", "cue": "a", "values": ["7:30"] },
+      { "id": "time", "dimension": "meaning", "type": "anyText", "cue": "a", "values": ["7:30", "שבע וחצי", "שבע שלושים"] },
       { "id": "tomorrow", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["מחר"] }
     ],
     "reference": { "a": "תפגוש אותי מחר ב-7:30." },
+    "accepted": [{ "a": "תפגוש אותי מחר בשבע וחצי." }],
     "wrong": { "a": "תפגוש אותי מחר ב-8:30." },
     "wrongFails": ["time"]
   },
@@ -25,9 +26,10 @@
     ],
     "checks": [
       { "id": "amount", "dimension": "meaning", "type": "preserve", "cue": "a", "values": ["250"] },
-      { "id": "currency", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["דולר", "דולרים"] }
+      { "id": "currency", "dimension": "meaning", "type": "anyText", "cue": "a", "values": ["דולר", "$"] }
     ],
     "reference": { "a": "הוא עולה 250 דולר." },
+    "accepted": [{ "a": "הוא עולה 250$." }],
     "wrong": { "a": "הוא עולה 25 דולר." },
     "wrongFails": ["amount"]
   },
@@ -87,9 +89,10 @@
       { "key": "a", "text": "Don't let him in, under any circumstances." }
     ],
     "checks": [
-      { "id": "absolute", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בשום מקרה", "בשום פנים", "בשום אופן", "בשום תנאי", "בשום מצב"] }
+      { "id": "absolute", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בשום מקרה", "בשום פנים", "בשום אופן", "בשום תנאי", "בשום מצב", "לא משנה מה"] }
     ],
     "reference": { "a": "אל תכניס אותו, בשום מקרה." },
+    "accepted": [{ "a": "אל תכניס אותו, לא משנה מה." }],
     "wrong": { "a": "תכניס אותו, בכל מקרה." },
     "wrongFails": ["absolute"]
   }

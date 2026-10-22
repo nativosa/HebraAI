@@ -8,8 +8,8 @@
       { "key": "a", "text": "Mom, sit down. You look tired." }
     ],
     "checks": [
-      { "id": "imp-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שבי", "תשבי"] },
-      { "id": "imp-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שב", "תשב"] },
+      { "id": "imp-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["שבי", "תשבי"], "prefixes": "ו" },
+      { "id": "imp-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["שב", "תשב"], "prefixes": "ו" },
       { "id": "look-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["אתה נראה", "נראה עייף"] }
     ],
     "reference": { "a": "אמא, שבי. את נראית עייפה." },
@@ -25,10 +25,11 @@
       { "key": "a", "text": "Dad, are you coming with us?" }
     ],
     "checks": [
-      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה בא", "תבוא", "מצטרף"] },
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה בא", "תבוא", "מצטרף", "בא איתנו", "אתה מגיע"] },
       { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את באה", "תבואי", "מצטרפת"] }
     ],
     "reference": { "a": "אבא, אתה בא איתנו?" },
+    "accepted": [{ "a": "אבא, בא איתנו?" }, { "a": "אבא, אתה מגיע איתנו?" }],
     "wrong": { "a": "אבא, את באה איתנו?" },
     "wrongFails": ["masc", "no-fem"]
   },
@@ -41,8 +42,8 @@
       { "key": "a", "text": "Sarah, listen to me." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["תקשיבי", "הקשיבי", "שמעי", "תשמעי"] },
-      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["תקשיב", "הקשב", "שמע", "תשמע"] }
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["תקשיבי", "הקשיבי", "שמעי", "תשמעי"], "prefixes": "ו" },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["תקשיב", "הקשב", "שמע", "תשמע"], "prefixes": "ו" }
     ],
     "reference": { "a": "שרה, תקשיבי לי." },
     "wrong": { "a": "שרה, תקשיב לי." },
@@ -89,10 +90,11 @@
       { "key": "a", "text": "Grandma, wait for me!" }
     ],
     "checks": [
-      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכי", "תחכי", "המתיני", "תמתיני"] },
-      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכה", "תחכה", "המתן", "תמתין"] }
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["חכי", "תחכי", "המתיני", "תמתיני"], "prefixes": "ו" },
+      { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["חכה", "תחכה", "המתן", "תמתין"], "prefixes": "ו" }
     ],
     "reference": { "a": "סבתא, חכי לי!" },
+    "accepted": [{ "a": "סבתא, תחכי לי!" }],
     "wrong": { "a": "סבתא, חכה לי!" },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -105,10 +107,11 @@
       { "key": "a", "text": "Sir, do you know where the train station is?" }
     ],
     "checks": [
-      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה יודע", "תוכל", "תדע"] },
+      { "id": "masc", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["אתה יודע", "תוכל", "תדע"], "neutral": ["אדוני, איפה", "סליחה, איפה"] },
       { "id": "no-fem", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["את יודעת", "תוכלי", "תדעי"] }
     ],
     "reference": { "a": "אדוני, אתה יודע איפה תחנת הרכבת?" },
+    "accepted": [{ "a": "אדוני, איפה תחנת הרכבת?" }],
     "wrong": { "a": "אדוני, את יודעת איפה תחנת הרכבת?" },
     "wrongFails": ["masc", "no-fem"]
   },
@@ -137,10 +140,11 @@
       { "key": "a", "text": "Lucy, you're right." }
     ],
     "checks": [
-      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"] },
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["צודקת"], "neutral": ["צדקת"] },
       { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["צודק"] }
     ],
     "reference": { "a": "לוסי, את צודקת." },
+    "accepted": [{ "a": "לוסי, צדקת." }],
     "wrong": { "a": "לוסי, אתה צודק." },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -170,10 +174,11 @@
       { "key": "a", "text": "Are you hungry, Maya?" }
     ],
     "checks": [
-      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["רעבה"] },
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["רעבה"], "neutral": ["בא לך"] },
       { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["רעב"] }
     ],
     "reference": { "a": "את רעבה, מאיה?" },
+    "accepted": [{ "a": "בא לך לאכול משהו, מאיה?" }],
     "wrong": { "a": "אתה רעב, מאיה?" },
     "wrongFails": ["fem", "no-masc"]
   },
@@ -218,10 +223,11 @@
       { "key": "a", "text": "Dr. Rachel Klein, what do you recommend?" }
     ],
     "checks": [
-      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["ממליצה", "מציעה"] },
+      { "id": "fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["ממליצה", "מציעה"], "neutral": ["ההמלצה שלך"] },
       { "id": "no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["ממליץ", "מציע"] }
     ],
     "reference": { "a": "ד\"ר רחל קליין, מה את ממליצה?" },
+    "accepted": [{ "a": "ד\"ר רחל קליין, מה ההמלצה שלך?" }],
     "wrong": { "a": "ד\"ר רחל קליין, מה אתה ממליץ?" },
     "wrongFails": ["fem", "no-masc"]
   }

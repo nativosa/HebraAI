@@ -12,9 +12,9 @@
       { "key": "c", "text": "Are you hungry?" }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["ג'ון", "גון", "מרי", "מרים"] },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["ג'ון", "גון", "מרי", "מרים"] },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["ג'ון", "גון", "מרי", "מרים"] },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["ג'ון", "מרי", "מרים"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["ג'ון", "מרי", "מרים"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["ג'ון", "מרי", "מרים"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "אני קצת לחוץ.", "b": "אל תהיה. גם אני לחוצה.", "c": "אתה רעב?" },
@@ -33,9 +33,9 @@
       { "key": "c", "text": "I'm ready." }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["שרה", "דן"] },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["שרה", "דן"] },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["שרה", "דן"] },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["שרה", "דן"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["שרה", "דן"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["שרה", "דן"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "אני מורעב.", "b": "גם אני. את מוכנה להזמין?", "c": "אני מוכנה." },
@@ -54,9 +54,9 @@
       { "key": "c", "text": "I'm sick of this." }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["לאה", "ראיין", "ריאן", "רייאן"] },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["לאה", "ראיין", "ריאן", "רייאן"] },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["לאה", "ראיין", "ריאן", "רייאן"] },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["לאה", "ראיין", "ריאן", "רייאן"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["לאה", "ראיין", "ריאן", "רייאן"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["לאה", "ראיין", "ריאן", "רייאן"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "אני לא רעבה.", "b": "את אף פעם לא רעבה.", "c": "נמאס לי מזה." },
@@ -75,9 +75,9 @@
       { "key": "c", "text": "I'll be there soon." }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["קייט", "קיית", "מקס"] },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["קייט", "קיית", "מקס"] },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["קייט", "קיית", "מקס"] },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["קייט", "קיית", "מקס"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["קייט", "קיית", "מקס"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["קייט", "קיית", "מקס"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "אתה בבית?", "b": "אני עדיין במשרד.", "c": "אני אגיע בקרוב." },
@@ -96,9 +96,9 @@
       { "key": "c", "text": "I'm glad you came." }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["טום", "רוז", "ורד"] },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["טום", "רוז", "ורד"] },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["טום", "רוז", "ורד"] },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["טום", "רוז", "ורד"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["טום", "רוז", "ורד"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["טום", "רוז", "ורד"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "ברור. את נראית נהדר.", "b": "תודה. לא השתנית.", "c": "אני שמחה שבאת." },
@@ -117,9 +117,9 @@
       { "key": "c", "text": "I'm sorry." }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["עומר", "דנה"] },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["עומר", "דנה"] },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["עומר", "דנה"] },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["עומר", "דנה"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["עומר", "דנה"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["עומר", "דנה"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "אני יודעת.", "b": "אתה תמיד עסוק.", "c": "אני מצטערת." },

@@ -152,10 +152,11 @@
       { "key": "a", "text": "Team, focus. Are you listening to me?" }
     ],
     "checks": [
-      { "id": "plural", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מקשיבים", "שומעים", "מקשיבות", "שומעות"] },
+      { "id": "plural", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מקשיבים", "שומעים", "מקשיבות", "שומעות", "אתם איתי"] },
       { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מקשיב", "מקשיבה", "שומע", "שומעת"] }
     ],
     "reference": { "a": "צוות, להתרכז. אתם מקשיבים לי?" },
+    "accepted": [{ "a": "צוות, להתרכז. אתם איתי?" }],
     "wrong": { "a": "צוות, להתרכז. אתה מקשיב לי?" },
     "wrongFails": ["plural", "no-singular"]
   }
