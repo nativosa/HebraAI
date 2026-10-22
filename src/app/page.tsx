@@ -8,7 +8,7 @@ import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
-import { describeParseReport, describePartial, type PartialSummary } from "@/lib/translation/report";
+import { describeGlossary, describeParseReport, describePartial, type PartialSummary } from "@/lib/translation/report";
 import { RunControl } from "@/lib/translation/run-control";
 import { readTranslationStream } from "@/lib/translation/stream-client";
 import type { Settings } from "@/lib/types";
@@ -157,7 +157,9 @@ export default function Home() {
 
       setPreviewHe(result.content);
       setTranslatedSrt(result.content);
-      setNotices(result.report ? describeParseReport(result.report.parse) : []);
+      setNotices(
+        result.report ? [...describeParseReport(result.report.parse), ...describeGlossary(result.report.glossary)] : []
+      );
       setPartial(result.partial && result.report ? describePartial(result.report) : null);
     } catch (err) {
       if (!isCurrent()) return;

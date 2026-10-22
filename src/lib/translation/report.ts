@@ -21,6 +21,7 @@ export type TranslationReport = {
   // Message of the request error that stopped the job, if any.
   failure?: string;
   removedSoundEffectCues: number;
+  glossary: { entries: number; ignoredLines: number[] };
   parse: { recovered: ParseIssue<RecoveredKind>[]; unparsed: UnparsedBlock[] };
 };
 
@@ -41,6 +42,16 @@ const UNPARSED: Record<UnparsedKind, string> = {
 
 const lineList = (lines: number[]) =>
   lines.length > 5 ? `lines ${lines.slice(0, 5).join(", ")}, …` : `line${lines.length > 1 ? "s" : ""} ${lines.join(", ")}`;
+
+// Note about the glossary for the UI, if there is anything to say.
+export function describeGlossary(glossary: TranslationReport["glossary"]): string[] {
+  const notes: string[] = [];
+  if (glossary.entries > 0) notes.push(`Glossary: ${glossary.entries} term(s) sent with the instructions.`);
+  if (glossary.ignoredLines.length > 0) {
+    notes.push(`Glossary ${lineList(glossary.ignoredLines)} ignored: expected "term = translation".`);
+  }
+  return notes;
+}
 
 // Human-readable notes about the input file for the UI.
 export function describeParseReport(parse: TranslationReport["parse"]): string[] {

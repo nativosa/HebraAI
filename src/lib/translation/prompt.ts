@@ -1,12 +1,13 @@
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import type { Cue } from "@/lib/srt/parse";
-import type { TranslateOptions } from "./options";
+import type { Glossary, TranslateOptions } from "./options";
 
 export function buildInstructions({
   tone,
   maxChars,
   preserveBreaks,
-}: Pick<TranslateOptions, "tone" | "maxChars" | "preserveBreaks">): string {
+  glossary,
+}: Pick<TranslateOptions, "tone" | "maxChars" | "preserveBreaks"> & { glossary?: Glossary }): string {
   let instructions =
     "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n" +
     "- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n";
@@ -39,6 +40,14 @@ export function buildInstructions({
   instructions +=
     "- Do NOT add explanations, comments, or extra text.\n" +
     "- Return ONLY valid JSON matching the requested schema.";
+
+  // Added only when the user supplied a glossary; otherwise the instructions
+  // are unchanged.
+  if (glossary?.entries.length) {
+    instructions +=
+      "\n- Use these glossary translations for the listed terms:" +
+      glossary.entries.map((e) => `\n  - ${e.term} => ${e.translation}`).join("");
+  }
 
   return instructions;
 }

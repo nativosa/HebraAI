@@ -121,6 +121,7 @@ describe("POST /api/translate: streaming", () => {
         requests: 1,
         repairs: 0,
         retries: 0,
+        glossary: { entries: 0, ignoredLines: [] },
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -146,11 +147,30 @@ describe("POST /api/translate: streaming", () => {
     expect(model.current!.calls[0].instructions).toBe(formal.instructions);
   });
 
-  it("LEGACY D11: ignores the glossary field", async () => {
+  it("D11 (fixed): sends the glossary after the unchanged base instructions", async () => {
     const neutral = golden.prompts.find((p: { name: string }) => p.name === "neutral.breaks-off");
-    await (await post({ ...neutral.fields, glossary: "Gotham=גות'האם", file: fixtureFile("basic.srt") })).text();
+    const res = await post({ ...neutral.fields, glossary: "Gotham=גות'האם\nbad line\n", file: fixtureFile("basic.srt") });
+    const final = ndjson(await res.text()).at(-1);
+    expect(model.current!.calls[0].instructions).toBe(
+      neutral.instructions + "\n- Use these glossary translations for the listed terms:\n  - Gotham => גות'האם"
+    );
+    expect(final.report.glossary).toEqual({ entries: 1, ignoredLines: [2] });
+  });
+
+  it("an empty glossary leaves the captured instructions unchanged", async () => {
+    const neutral = golden.prompts.find((p: { name: string }) => p.name === "neutral.breaks-off");
+    await (await post({ ...neutral.fields, glossary: "  \n\n", file: fixtureFile("basic.srt") })).text();
     expect(model.current!.calls[0].instructions).toBe(neutral.instructions);
-    expect(JSON.stringify(model.current!.calls[0])).not.toContain("Gotham");
+  });
+
+  it.each([
+    ["too many entries", Array.from({ length: 101 }, (_, i) => `t${i} = x`).join("\n"), "101 entries; the maximum is 100"],
+    ["too long", `a = ${"x".repeat(4000)}`, "4004 characters; the maximum is 4000"],
+  ])("400 when the glossary is %s", async (_label, glossary, message) => {
+    const res = await post({ ...UI_DEFAULTS, glossary, file: fixtureFile("basic.srt") });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain(message);
+    expect(model.current!.calls).toHaveLength(0);
   });
 
   // Offline counterpart of `npm run baseline:check`: every Stage 0 case,

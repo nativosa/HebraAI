@@ -37,6 +37,9 @@ export const PROMPT_VARIANTS = [
   ["maxchars-low", { maxChars: "10" }],
   ["maxchars-high", { maxChars: "100" }],
   ["maxchars-fraction", { maxChars: "42.5" }],
+  // Stage 2 (D11): glossary sent with the instructions.
+  ["glossary", { glossary: "John = ג׳ון\nFBI = FBI" }],
+  ["glossary-ignored-lines", { glossary: "John = ג׳ון\nno separator\n= x" }],
 ].map(([name, fields]) => ({ name, fields: { ...PROMPT_BASE, ...fields } }));
 
 export function appUrl(port) {

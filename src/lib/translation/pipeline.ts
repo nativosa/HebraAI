@@ -33,7 +33,7 @@ export type StreamEvent =
   | { type: "error"; message: string; report?: TranslationReport };
 
 // Facts about the input that the final report carries through.
-export type TranslateContext = Pick<TranslationReport, "parse" | "removedSoundEffectCues">;
+export type TranslateContext = Pick<TranslationReport, "parse" | "removedSoundEffectCues" | "glossary">;
 
 export type TranslateOptions = {
   context?: TranslateContext;
@@ -49,7 +49,11 @@ export type TranslateOptions = {
 // Thrown inside the job once its signal is aborted.
 class Cancelled extends Error {}
 
-const NO_CONTEXT: TranslateContext = { parse: { recovered: [], unparsed: [] }, removedSoundEffectCues: 0 };
+const NO_CONTEXT: TranslateContext = {
+  parse: { recovered: [], unparsed: [] },
+  removedSoundEffectCues: 0,
+  glossary: { entries: 0, ignoredLines: [] },
+};
 
 export function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSrt } from "@/lib/srt/parse";
-import { describeParseReport, describePartial } from "@/lib/translation/report";
+import { describeGlossary, describeParseReport, describePartial } from "@/lib/translation/report";
 import { readSrtFixture } from "../helpers/fixtures";
 
 describe("describeParseReport", () => {
@@ -28,7 +28,14 @@ describe("describeParseReport", () => {
 });
 
 describe("describePartial", () => {
-  const base = { requests: 1, repairs: 0, retries: 0, removedSoundEffectCues: 0, parse: { recovered: [], unparsed: [] } };
+  const base = {
+    requests: 1,
+    repairs: 0,
+    retries: 0,
+    removedSoundEffectCues: 0,
+    glossary: { entries: 0, ignoredLines: [] },
+    parse: { recovered: [], unparsed: [] },
+  };
   const u = (id: number, number: number | null, reason: "missing" | "refusal") => ({
     id,
     number,
@@ -57,5 +64,18 @@ describe("describePartial", () => {
     );
     expect(s.rows).toHaveLength(20);
     expect(s.more).toBe(5);
+  });
+});
+
+describe("describeGlossary", () => {
+  it("is silent without a glossary", () => {
+    expect(describeGlossary({ entries: 0, ignoredLines: [] })).toEqual([]);
+  });
+
+  it("states the terms sent and the ignored lines", () => {
+    expect(describeGlossary({ entries: 2, ignoredLines: [3] })).toEqual([
+      "Glossary: 2 term(s) sent with the instructions.",
+      'Glossary line 3 ignored: expected "term = translation".',
+    ]);
   });
 });

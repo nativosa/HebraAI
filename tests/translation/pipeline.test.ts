@@ -122,7 +122,7 @@ describe("translateCues: output order and report", () => {
   it("reports counts and carries the input context", async () => {
     const parse = { recovered: [{ line: 9, kind: "missing-number" as const }], unparsed: [] };
     const events = await collect(
-      translateCues(stubModel().createResponse, cues(3), "instr", { context: { parse, removedSoundEffectCues: 2 } })
+      translateCues(stubModel().createResponse, cues(3), "instr", { context: { parse, removedSoundEffectCues: 2, glossary: { entries: 0, ignoredLines: [] } } })
     );
     expect(events.at(-1)).toMatchObject({
       type: "complete",
@@ -155,6 +155,7 @@ describe("translateCues: validation and partial results", () => {
         requests: 2,
         repairs: 1,
         retries: 0,
+        glossary: { entries: 0, ignoredLines: [] },
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },

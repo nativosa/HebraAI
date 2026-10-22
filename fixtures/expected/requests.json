@@ -186,6 +186,30 @@
         }
       }
     ],
+    "prompt.glossary": [
+      {
+        "items": 4,
+        "sha256": {
+          "request": "f50eb0e5d31c81d05973687ab4feeafc603c6de62381daecda836c55a128fce0",
+          "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
+          "instructions": "634380b1e18451548e7db729d6e187a505d09b2ec6e2d1ebe9557d849df5943f",
+          "input": "3cdcbb3da87ce23485507dad6ddeffc41d47cc6a8a81a7c82063747f4d0fd328",
+          "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
+        }
+      }
+    ],
+    "prompt.glossary-ignored-lines": [
+      {
+        "items": 4,
+        "sha256": {
+          "request": "cd264487e82dd890c3c70a4872642f39fa8c114d470f5cd76c23b4cb895c5843",
+          "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
+          "instructions": "ea0b1834ff204ccb61998e55ba0d25d4a93c800f0396fe50db025143f306cadd",
+          "input": "3cdcbb3da87ce23485507dad6ddeffc41d47cc6a8a81a7c82063747f4d0fd328",
+          "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
+        }
+      }
+    ],
     "prompt.informal.breaks-off": [
       {
         "items": 4,

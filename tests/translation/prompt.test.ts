@@ -79,3 +79,22 @@ describe("buildChunkRequest", () => {
     expect(cues).toEqual(copy);
   });
 });
+
+describe("buildInstructions: glossary (D11)", () => {
+  const neutral = golden.prompts.find((p) => p.name === "neutral.breaks-on")!;
+  const options = () => parseTranslateOptions(form(neutral.fields));
+
+  it("appends one block after the captured base instructions", () => {
+    const glossary = { entries: [{ term: "John", translation: "ג׳ון" }, { term: "FBI", translation: "FBI" }], ignoredLines: [] };
+    expect(buildInstructions({ ...options(), glossary })).toBe(
+      neutral.instructions +
+        "\n- Use these glossary translations for the listed terms:" +
+        "\n  - John => ג׳ון" +
+        "\n  - FBI => FBI"
+    );
+  });
+
+  it("leaves the instructions unchanged without entries", () => {
+    expect(buildInstructions({ ...options(), glossary: { entries: [], ignoredLines: [4] } })).toBe(neutral.instructions);
+  });
+});

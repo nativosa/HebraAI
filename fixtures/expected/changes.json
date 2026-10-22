@@ -8,6 +8,8 @@
   "requests": {
     "duplicate-index.sfx-off": "D1: input only - items carry internal ids 1-4 instead of SRT numbers 1,2,2,3",
     "duplicate-index.sfx-on": "D1: input only - items carry internal ids 1-4 instead of SRT numbers 1,2,2,3",
+    "prompt.glossary": "new: D11 - glossary block appended to the unchanged base instructions (instructions only)",
+    "prompt.glossary-ignored-lines": "new: D11 - malformed glossary lines are ignored; one term appended (instructions only)",
     "quirks.sfx-off": "D2-D4: input only - 6 cues sent instead of 3, with internal ids 1-6",
     "quirks.sfx-on": "D2-D4: input only - 6 cues sent instead of 3, with internal ids 1-6"
   }

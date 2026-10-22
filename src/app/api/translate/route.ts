@@ -4,7 +4,7 @@ import { errorMessage } from "@/lib/errors";
 import { createOpenAIClient } from "@/lib/openai-client";
 import { parseSrt } from "@/lib/srt/parse";
 import { removeSoundEffectCues } from "@/lib/srt/sound-effects";
-import { parseTranslateOptions } from "@/lib/translation/options";
+import { glossaryLimitError, parseTranslateOptions } from "@/lib/translation/options";
 import { DEFAULT_MAX_ATTEMPTS_PER_CHUNK, type StreamEvent, translateCues } from "@/lib/translation/pipeline";
 import { buildInstructions } from "@/lib/translation/prompt";
 
@@ -55,7 +55,13 @@ export async function POST(req: Request) {
 
   // --- Inputs (sanitize) ---
   const options = parseTranslateOptions(form);
-  const { removeSoundEffects } = options;
+  const { removeSoundEffects, glossary } = options;
+
+  const glossaryRaw = form.get("glossary");
+  const glossaryError = glossaryLimitError(typeof glossaryRaw === "string" ? glossaryRaw : "", glossary);
+  if (glossaryError) {
+    return NextResponse.json({ error: glossaryError }, { status: 400 });
+  }
 
   // --- Build instructions (dynamic) ---
   const instructions = buildInstructions(options);
@@ -103,6 +109,7 @@ export async function POST(req: Request) {
         const context = {
           parse: { recovered: parsed.recovered, unparsed: parsed.unparsed },
           removedSoundEffectCues: cues.length - filteredCues.length,
+          glossary: { entries: glossary.entries.length, ignoredLines: glossary.ignoredLines },
         };
         const options = { context, maxAttemptsPerChunk: getMaxAttemptsPerChunk(), signal: abort.signal };
         const createResponse = (p: ResponseCreateParamsNonStreaming, o: { signal?: AbortSignal }) => client.responses.create(p, o);
