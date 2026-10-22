@@ -20,6 +20,7 @@ npm run dev                  # http://127.0.0.1:3000
 |---|---|---|
 | `OPENAI_API_KEY` | yes | Read only by the server route `src/app/api/translate/route.ts`. Never sent to the browser. |
 | `MAX_FILE_SIZE_BYTES` | no | Upload size limit in bytes. Default `524288` (512 KB). Larger files get HTTP 413. |
+| `MAX_ATTEMPTS_PER_CHUNK` | no | Maximum OpenAI requests per 60-cue chunk, counting the first request, repairs and retries. Integer 1–20, default `6`. |
 
 `.env.local` is git-ignored. Never commit real keys.
 
@@ -33,23 +34,66 @@ npm run dev                  # http://127.0.0.1:3000
 | `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `npm test` | Vitest unit and route tests (offline, see below) |
 | `npm run baseline:check` | Offline regression check: no OpenAI calls (see below) |
-| `npm run baseline:capture -- --overwrite` | Explicitly regenerate the legacy baseline and request fingerprints |
-| `npm run golden:capture -- --overwrite` | Explicitly regenerate the unit tests' golden values from the running app |
+| `npm run baseline:capture -- --overwrite` | Explicitly regenerate `fixtures/expected/` (outputs and request fingerprints); the legacy references are never rewritten |
+| `npm run golden:capture -- --overwrite` | Regenerate the Stage 0 golden values (only for an intended base-prompt change) |
 | `npm run check:openai-endpoint` | Offline check that only the official OpenAI endpoint can be used outside test mode |
 | `npm run srt:inspect <file>` | Print the structure of an SRT file (cue count, indices, BOM/EOL, hash) |
 | `npm run srt:compare <a> <b>` | Compare two SRT files' cue numbering and timestamps (ignores text) |
+
+## How a translation behaves
+
+- **Input file.** Cues are identified internally by position, so repeated or
+  missing cue numbers no longer mix up translations. Irregular input that can
+  be handled safely (`.` in timestamps, one-digit hours, missing number lines,
+  cues not separated by a blank line, empty cues) is recovered; content that
+  cannot be parsed safely (text without a timestamp, invalid timing lines) is
+  not guessed at. Both are listed under "Input file notes" with line numbers.
+- **Output.** Cues keep their input order and original numbers; only when a
+  cue had no number is the output renumbered 1..N. Byte order mark and CRLF
+  line endings are not preserved (output is UTF-8, LF).
+- **Complete vs partial.** "Download SRT" appears only when every cue was
+  translated. If some cues could not be translated, the result is marked
+  **partial**: those cues keep their English text, the panel lists their
+  numbers, timings and reasons, and the button reads **Download Partial SRT**
+  (`translated.he.PARTIAL.srt`). If nothing was translated, an error is shown.
+- **Checking the model's answer.** Each answer must contain exactly one
+  non-empty translation for every cue sent. Names, English terms and text
+  identical to the source are accepted. Missing, empty or conflicting
+  translations, invalid JSON and cut-off answers are re-requested once (only
+  the affected cues, or the chunk in two halves). Refusals and content-filter
+  results are never re-requested; those cues are reported as untranslated.
+- **Temporary errors.** Timeouts, connection errors, HTTP 408/409/429 and 5xx
+  are retried up to 3 times per request with exponential backoff (1 s, 2 s,
+  4 s …, ±20 %, or the server's `retry-after`); the UI shows the countdown.
+  Permanent errors (other 4xx, exhausted quota) are not retried. A request
+  that keeps failing stops the job; chunks already translated are kept as a
+  partial result. All attempts for a chunk count against
+  `MAX_ATTEMPTS_PER_CHUNK` (default 6).
+- **Cancel.** Stops the job at once: no further chunks, retries or repairs,
+  and the OpenAI request in flight is aborted. Nothing from the cancelled run
+  is kept. A request already sent to OpenAI may still be billed.
+- **Glossary.** One `term = translation` per line (e.g. `John = ג׳ון`); up
+  to 100 terms and 4,000 characters. The terms are sent with the
+  instructions; lines without a term or translation are ignored and reported.
+- **Remove sound effects.** Drops `(…)`, `[…]` and `♪…♪` annotations
+  anywhere in a cue (including parenthetical speaker labels such as
+  `(Mary)` and song lyrics), and cues that contain nothing else. Formatting
+  tags such as `<i>` are kept around the remaining dialogue.
 
 ## Code layout
 
 | Path | Responsibility |
 |---|---|
-| `src/app/api/translate/route.ts` | HTTP only: key check, upload guards, error responses, NDJSON stream |
-| `src/lib/srt/` | Pure SRT handling: `parse`, `build`, `sound-effects` filtering |
-| `src/lib/translation/options.ts` | Reads and sanitizes the form options |
+| `src/app/api/translate/route.ts` | HTTP only: key check, upload guards, error responses, NDJSON stream, cancellation |
+| `src/lib/srt/` | Pure SRT handling: `parse` (cue ids, recovered / unparsed input), `build`, `sound-effects` filtering |
+| `src/lib/translation/options.ts` | Reads and sanitizes the form options, incl. the glossary |
 | `src/lib/translation/prompt.ts` | Instructions and the Responses API request for one chunk |
-| `src/lib/translation/response.ts` | Parses model output and applies it to cues (English fallback) |
-| `src/lib/translation/pipeline.ts` | Chunks of 60 cues, sequential requests, progress / complete / error events; the model call is passed in |
-| `src/lib/openai-client.ts` | OpenAI client pinned to the official endpoint |
+| `src/lib/translation/response.ts` | Validates a model answer per cue (refusal, incomplete, invalid, missing, empty …) |
+| `src/lib/translation/retry.ts` | Which errors are temporary, backoff delays, abortable sleep |
+| `src/lib/translation/pipeline.ts` | Chunks of 60 cues, sequential requests, repair, retries, request budget, cancellation, final event; the model call is passed in |
+| `src/lib/translation/report.ts` | Report sent with the final event (counts, line numbers, timings — no subtitle text) and its UI texts |
+| `src/lib/translation/stream-client.ts`, `run-control.ts` | Browser side: reading the NDJSON stream, cancelling and discarding stale runs |
+| `src/lib/openai-client.ts` | OpenAI client pinned to the official endpoint; SDK retries off, 120 s timeout per attempt |
 
 ## Tests (free, offline)
 
@@ -58,23 +102,30 @@ tests use an in-process stub model that answers exactly like the offline fake
 server, and the route tests replace the OpenAI client module and disable
 `fetch`.
 
-- Expected values are literals, the Stage 0 baseline files, or golden values
-  captured from the running app before the refactor
-  (`tests/golden/legacy-golden.json`); no snapshots are written by test runs.
-- Known defects are pinned by tests named `LEGACY D#`
-  (`fixtures/KNOWN_DEFECTS.md`); they describe current behaviour and are
-  inverted when a defect is fixed.
+- Expected values are literals, the expected output files
+  (`fixtures/expected/`), or golden values captured from the original app
+  (`tests/golden/legacy-golden.json`, e.g. the base prompt); no snapshots
+  are written by test runs. Retries and backoff use injected sleep and random
+  functions, so they run instantly and deterministically.
+- Known defects (`fixtures/KNOWN_DEFECTS.md`) are covered by tests named
+  `D# (fixed)`; the ones still open are pinned as `LEGACY D#`.
 
 ## Regression baseline (free, offline)
 
 `npm run baseline:check` builds the app, starts it on `127.0.0.1:3123` with a
 fake API key and a local fake OpenAI server, runs every file in
 `fixtures/srt/` through `/api/translate`, and compares the output byte-for-byte
-with `fixtures/legacy-baseline/`. It also compares hashes of every request
-sent to the fake OpenAI server (model, instructions, input, schema) with
-`fixtures/legacy-requests.json`. The baseline records current behaviour,
-**including known defects** (`fixtures/KNOWN_DEFECTS.md`), so a pass means
-"unchanged", not "correct". See `fixtures/README.md`.
+with `fixtures/expected/`. It also compares hashes of every request sent to the
+fake OpenAI server (model, instructions, input, schema) with
+`fixtures/expected/requests.json`. Every difference from the immutable Stage 0
+references (`fixtures/legacy-baseline/`, `fixtures/legacy-requests.json`) must
+be listed with its reason in `fixtures/expected/changes.json`.
+
+It then runs reliability scenarios against a scripted fake server (missing
+items, refusals, content filter, invalid JSON, 429/5xx with retries, permanent
+errors) and checks cancellation before and during the response stream: the
+OpenAI request in flight must be aborted and no further request sent. See
+`fixtures/README.md`.
 
 Real (paid) translations are never run automatically. Put private subtitle
 files and real outputs in `fixtures/private/`, which is git-ignored.
