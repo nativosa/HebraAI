@@ -11,6 +11,10 @@ import {
   DEFAULT_BUDGET_USD,
   addEstimates,
   canStart,
+  chargeFor,
+  checkBudget,
+  orderRuns,
+  worstCase,
   costUsd,
   estimateRequest,
   pricesFrom,
@@ -103,5 +107,30 @@ describe("planCase (classic)", () => {
   it("estimates the whole synthetic dataset", () => {
     const total = cases.map((c) => planCase(c, "classic", app)).reduce(addEstimates);
     expect(total.requests).toBe(cases.reduce((n, c) => n + Math.ceil(c.expandedCues.length / 60), 0));
+  });
+});
+
+describe("budget planning", () => {
+  const cs = ["a-1", "a-2", "b-1", "c-1"].map((id) => ({ id, category: id[0] }));
+
+  it("orders runs round-robin across categories with all modes of a case together", () => {
+    expect(orderRuns(cs, ["classic", "context"], 1).map((r) => `${r.c.id}/${r.mode}`)).toEqual([
+      "a-1/classic", "a-1/context", "b-1/classic", "b-1/context", "c-1/classic", "c-1/context", "a-2/classic", "a-2/context",
+    ]);
+  });
+
+  it("checks the whole plan with the margin against the budget", () => {
+    expect(checkBudget({ totalUsd: 0.46, budgetUsd: 0.5, margin: 1.5 })).toEqual({ fits: false, requiredUsd: 0.69 });
+    expect(checkBudget({ totalUsd: 0.3, budgetUsd: 0.5, margin: 1.5 })).toEqual({ fits: true, requiredUsd: 0.45 });
+  });
+
+  it("reports the worst single case with all attempts used", () => {
+    const runs = [{ c: { id: "x" }, mode: "classic", estimateUsd: 0.01 }, { c: { id: "y" }, mode: "classic", estimateUsd: 0.05 }];
+    expect(worstCase(runs, 6)).toEqual({ caseId: "y", mode: "classic", usd: 0.3 });
+  });
+
+  it("charges retries at the per-request estimate, and the estimate when nothing was reported", () => {
+    expect(chargeFor({ reportedUsd: 0.01, retries: 2, estimateUsd: 0.04, estimateRequests: 2 })).toBe(0.05);
+    expect(chargeFor({ reportedUsd: undefined, retries: 0, estimateUsd: 0.04, estimateRequests: 2 })).toBe(0.04);
   });
 });

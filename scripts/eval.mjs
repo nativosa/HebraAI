@@ -15,7 +15,9 @@
 //   --cases-dir <dir>        dataset directory (default eval/cases/synthetic); e.g. a
 //                            private set under fixtures/private/ (git-ignored)
 //   --budget-usd <x>         per-run spending budget for real runs (default 0.50)
-//   --margin <x>             safety factor on each case's estimate (default 1.5)
+//   --margin <x>             safety factor on estimates (default 1.5)
+//   --allow-partial          run even if the whole plan x margin exceeds the budget
+//                            (the run then stops when the budget is reached)
 //   --save-outputs           also write model outputs to fixtures/private/eval-outputs/
 //                            (git-ignored) for manual review of meaning and naturalness
 //   --yes                    skip the interactive prompt (real runs still need HEBRAAI_REAL_EVAL=1)
@@ -32,7 +34,20 @@ import { createServer } from "node:net";
 import { startFakeOpenAI } from "./fake-openai.mjs";
 import { ROOT, appUrl, startApp, stopApp, waitForApp } from "./app-server.mjs";
 import { CATEGORIES, loadCases } from "../eval/lib/cases.mjs";
-import { DEFAULT_BUDGET_USD, DEFAULT_MARGIN, NO_ESTIMATE, addEstimates, canStart, costUsd, pricesFrom, sampleCases } from "../eval/lib/estimate.mjs";
+import {
+  DEFAULT_BUDGET_USD,
+  DEFAULT_MARGIN,
+  NO_ESTIMATE,
+  addEstimates,
+  canStart,
+  chargeFor,
+  checkBudget,
+  costUsd,
+  orderRuns,
+  pricesFrom,
+  sampleCases,
+  worstCase,
+} from "../eval/lib/estimate.mjs";
 import { planCase } from "../eval/lib/plan.mjs";
 import { buildRunReport, compareMarkdown, runMarkdown } from "../eval/lib/report.mjs";
 import { MODES, buildRequest } from "../eval/lib/request.mjs";
@@ -50,6 +65,7 @@ const { values: opts, positionals } = parseArgs({
     "cases-dir": { type: "string", default: "eval/cases/synthetic" },
     "budget-usd": { type: "string" },
     margin: { type: "string" },
+    "allow-partial": { type: "boolean", default: false },
     "save-outputs": { type: "boolean", default: false },
     yes: { type: "boolean", default: false },
   },
@@ -98,21 +114,23 @@ function selectModes() {
   return modes;
 }
 
+// Runs in round-robin order across categories, all modes of a case together.
 function makePlan(cases, modes, repeat, app, prices) {
-  const runs = [];
-  for (const mode of modes) {
-    for (let rep = 1; rep <= repeat; rep++) {
-      for (const c of cases) {
-        const estimate = planCase(c, mode, app);
-        runs.push({ c, mode, rep, estimate, estimateUsd: prices ? costUsd(estimate, prices) : null });
-      }
-    }
-  }
+  const runs = orderRuns(cases, modes, repeat).map(({ c, mode, rep }) => {
+    const estimate = planCase(c, mode, app);
+    return { c, mode, rep, estimate, estimateUsd: prices ? costUsd(estimate, prices) : null };
+  });
   const total = runs.map((r) => r.estimate).reduce(addEstimates, NO_ESTIMATE);
   return { runs, total, totalUsd: prices ? costUsd(total, prices) : null };
 }
 
-function printPlan({ cases, dataset, modes, repeat, plan, prices, budgetUsd, margin, real, enforceBudget }) {
+// Attempt limit per chunk the app will use (MAX_ATTEMPTS_PER_CHUNK, 1-20, default 6).
+function maxAttemptsFrom(env) {
+  const n = Number(env.MAX_ATTEMPTS_PER_CHUNK);
+  return Number.isInteger(n) && n >= 1 && n <= 20 ? n : 6;
+}
+
+function printPlan({ cases, dataset, modes, repeat, plan, prices, budgetUsd, margin, real, enforceBudget, budgetCheck, worst, maxAttempts }) {
   const perCategory = CATEGORIES.map((k) => [k, cases.filter((c) => c.category === k).length])
     .filter(([, n]) => n > 0)
     .map(([k, n]) => `${k} ${n}`)
@@ -131,6 +149,13 @@ function printPlan({ cases, dataset, modes, repeat, plan, prices, budgetUsd, mar
       enforceBudget
         ? `  budget:    $${budgetUsd.toFixed(2)} per run; a case starts only if spent + estimate x ${margin} fits; otherwise the run stops`
         : "",
+      enforceBudget && budgetCheck
+        ? `  plan:      estimate x ${margin} = $${budgetCheck.requiredUsd.toFixed(4)} ${budgetCheck.fits ? "fits the budget" : "EXCEEDS the budget (needs --allow-partial)"}`
+        : "",
+      worst
+        ? `  worst case: ${worst.caseId} (${worst.mode}) ~$${worst.usd.toFixed(4)} if every chunk uses all ${maxAttempts} attempts — the most a run can overshoot its budget`
+        : "",
+      enforceBudget ? "  retries count against the budget at the estimated cost of one request each." : "",
       "",
       "  Estimates are not a billing limit: actual usage is known only after each request,",
       "  and requests in flight, repairs and retries may still be billed.",
@@ -172,6 +197,7 @@ async function runCase(port, app, c, mode) {
     untranslated: (r?.untranslated ?? []).map((u) => keyOf[u.number]).filter(Boolean),
     metrics: {
       requests: r?.requests ?? 0,
+      retries: r?.retries ?? 0,
       inputTokens: r?.usage?.inputTokens ?? 0,
       outputTokens: r?.usage?.outputTokens ?? 0,
       elapsedMs: r?.elapsedMs ?? 0,
@@ -180,7 +206,7 @@ async function runCase(port, app, c, mode) {
   };
 }
 
-async function execute({ dataset, modes, repeat, plan, budgetUsd, margin, real, app }) {
+async function execute({ dataset, modes, repeat, plan, budgetUsd, margin, real, app, worst, allowPartial }) {
   let fake = null;
   const savedEnv = { ...process.env };
   if (!real) {
@@ -212,7 +238,12 @@ async function execute({ dataset, modes, repeat, plan, budgetUsd, margin, real, 
       }
       plannedRequests += run.estimate.requests;
       const result = await runCase(port, app, run.c, run.mode);
-      spentUsd += result.metrics.estimatedCostUsd ?? nextUsd;
+      spentUsd += chargeFor({
+        reportedUsd: result.metrics.estimatedCostUsd,
+        retries: result.metrics.retries,
+        estimateUsd: nextUsd,
+        estimateRequests: run.estimate.requests,
+      });
       const score = { ...scoreCase(run.c, result), mode: run.mode, rep: run.rep };
       scoresByMode[run.mode].push(score);
       console.log(`${score.pass ? "PASS" : "FAIL"}  ${run.mode} ${run.c.id}${repeat > 1 ? ` #${run.rep}` : ""}  [${result.status}]`);
@@ -236,7 +267,9 @@ async function execute({ dataset, modes, repeat, plan, budgetUsd, margin, real, 
       scores: scoresByMode[mode],
       repeat,
       estimate: { ...plan.total, usd: plan.totalUsd },
-      ...(enforceBudget ? { budget: { usd: budgetUsd, margin, spentUsd: Math.round(spentUsd * 1e6) / 1e6, skipped } } : {}),
+      ...(enforceBudget
+        ? { budget: { usd: budgetUsd, margin, allowPartial, worstCaseUsd: worst?.usd ?? null, spentUsd: Math.round(spentUsd * 1e6) / 1e6, skipped } }
+        : {}),
       stoppedEarly,
     })
   );
@@ -322,18 +355,29 @@ async function main() {
   const { cases, dataset } = selectCases();
   const modes = selectModes();
   const app = await loadAppModules();
-  const prices = command === "offline" ? pricesFrom(OFFLINE_PRICES) : pricesFrom({ ...envLocal(), ...process.env });
+  const env = { ...envLocal(), ...process.env };
+  const prices = command === "offline" ? pricesFrom(OFFLINE_PRICES) : pricesFrom(env);
+  const maxAttempts = command === "offline" ? 6 : maxAttemptsFrom(env);
   const plan = makePlan(cases, modes, repeat, app, prices);
-  printPlan({ cases, dataset, modes, repeat, plan, prices, budgetUsd, margin, real, enforceBudget: real || opts["budget-usd"] !== undefined });
+  const enforceBudget = real || opts["budget-usd"] !== undefined;
+  const budgetCheck = plan.totalUsd === null ? null : checkBudget({ totalUsd: plan.totalUsd, budgetUsd, margin });
+  const worst = prices ? worstCase(plan.runs, maxAttempts) : null;
+  printPlan({ cases, dataset, modes, repeat, plan, prices, budgetUsd, margin, real, enforceBudget, budgetCheck, worst, maxAttempts });
 
   if (command === "estimate") return 0;
+  if (enforceBudget && budgetCheck && !budgetCheck.fits && !opts["allow-partial"]) {
+    fail(
+      `Refusing: the plan needs ~$${budgetCheck.requiredUsd.toFixed(4)} (estimate x ${margin}) but the budget is $${budgetUsd.toFixed(2)}.\n` +
+        "Raise --budget-usd, select fewer cases (--sample / --cases), or pass --allow-partial to stop when the budget is reached."
+    );
+  }
   if (real) {
     if (process.env.HEBRAAI_REAL_EVAL !== "1") fail("Refusing: set HEBRAAI_REAL_EVAL=1 to allow a real (paid) evaluation.");
     if (!prices) fail("Refusing: set OPENAI_PRICE_INPUT_PER_MTOK and OPENAI_PRICE_OUTPUT_PER_MTOK so the budget can be enforced.");
     if (!(process.env.OPENAI_API_KEY || envLocal().OPENAI_API_KEY)) fail("Refusing: no OPENAI_API_KEY in the environment or .env.local.");
     if (!(await confirmReal(plan, budgetUsd))) fail("Cancelled.");
   }
-  const result = await execute({ cases, dataset, modes, repeat, plan, prices, budgetUsd, margin, real, app });
+  const result = await execute({ dataset, modes, repeat, plan, budgetUsd, margin, real, app, worst, allowPartial: opts["allow-partial"] });
   return real ? 0 : verifyOffline({ ...result, plan, cases });
 }
 

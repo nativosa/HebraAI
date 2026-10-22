@@ -55,8 +55,26 @@ export function canStart({ spentUsd, nextEstimateUsd, budgetUsd, margin = DEFAUL
   return spentUsd + nextEstimateUsd * margin <= budgetUsd;
 }
 
-// Stratified small sample: up to `size` cases, taken round-robin across
-// categories in id order, so every category is represented.
+// Cases in round-robin order across categories (id order within each), so
+// any prefix of the list covers every category.
+/**
+ * @template {{ id: string, category: string }} T
+ * @param {T[]} cases
+ * @returns {T[]}
+ */
+export function roundRobin(cases) {
+  const byCategory = new Map();
+  for (const c of [...cases].sort((a, b) => a.id.localeCompare(b.id))) {
+    if (!byCategory.has(c.category)) byCategory.set(c.category, []);
+    byCategory.get(c.category).push(c);
+  }
+  const queues = [...byCategory.values()];
+  const out = [];
+  for (let i = 0; out.length < cases.length; i++) for (const q of queues) if (q[i]) out.push(q[i]);
+  return out;
+}
+
+// Stratified small sample: the first `size` cases of the round-robin order.
 /**
  * @template {{ id: string, category: string }} T
  * @param {T[]} cases
@@ -65,17 +83,38 @@ export function canStart({ spentUsd, nextEstimateUsd, budgetUsd, margin = DEFAUL
  */
 export function sampleCases(cases, size) {
   if (!size || size >= cases.length) return cases;
-  const byCategory = new Map();
-  for (const c of [...cases].sort((a, b) => a.id.localeCompare(b.id))) {
-    if (!byCategory.has(c.category)) byCategory.set(c.category, []);
-    byCategory.get(c.category).push(c);
+  return roundRobin(cases).slice(0, size);
+}
+
+// Run order: repetition, then cases round-robin across categories, then all
+// modes for a case together — an early stop keeps categories and modes
+// comparable.
+export function orderRuns(cases, modes, repeat) {
+  const runs = [];
+  for (let rep = 1; rep <= repeat; rep++) {
+    for (const c of roundRobin(cases)) for (const mode of modes) runs.push({ c, mode, rep });
   }
-  const queues = [...byCategory.values()];
-  const picked = [];
-  for (let i = 0; picked.length < size; i++) {
-    const before = picked.length;
-    for (const q of queues) if (q[i] && picked.length < size) picked.push(q[i]);
-    if (picked.length === before) break;
-  }
-  return picked;
+  return runs;
+}
+
+// Up-front check: does the whole plan, with the safety margin, fit the budget?
+export function checkBudget({ totalUsd, budgetUsd, margin = DEFAULT_MARGIN }) {
+  const requiredUsd = Math.round(totalUsd * margin * 1e6) / 1e6;
+  return { fits: requiredUsd <= budgetUsd, requiredUsd };
+}
+
+// The most expensive single case if every chunk used all its attempts — the
+// most a run can overshoot its budget, since a started case is not cut off.
+export function worstCase(runs, maxAttemptsPerChunk) {
+  const top = runs.reduce((best, r) => ((r.estimateUsd ?? 0) > (best?.estimateUsd ?? -1) ? r : best), null);
+  if (!top) return null;
+  return { caseId: top.c.id, mode: top.mode, usd: Math.round((top.estimateUsd ?? 0) * maxAttemptsPerChunk * 1e6) / 1e6 };
+}
+
+// What a finished case counts against the budget: its reported cost (or the
+// estimate when none was reported) plus every retry at the estimated cost of
+// one request — failed attempts report no tokens but may still be billed.
+export function chargeFor({ reportedUsd, retries = 0, estimateUsd, estimateRequests }) {
+  const perRequest = estimateRequests ? estimateUsd / estimateRequests : 0;
+  return Math.round(((reportedUsd ?? estimateUsd) + retries * perRequest) * 1e6) / 1e6;
 }
