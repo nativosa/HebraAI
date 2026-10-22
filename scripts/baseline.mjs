@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Offline legacy-regression harness. Makes NO OpenAI calls.
+// Offline regression harness. Makes NO OpenAI calls.
 //
-//   npm run baseline:check                    # verify; never writes baseline files
-//   npm run baseline:capture -- --overwrite   # explicit regeneration only
+//   npm run baseline:check                    # verify; never writes any file
+//   npm run baseline:capture -- --overwrite   # explicit regeneration of fixtures/expected/ only
 //
 // How it works:
 //   1. Starts a local fake Responses API (scripts/fake-openai.mjs).
@@ -12,26 +12,28 @@
 //      overrides .env.local, so the real key is never loaded into this server).
 //      See scripts/app-server.mjs.
 //   3. POSTs every fixture in fixtures/srt/ to /api/translate, with sound-effect
-//      removal on and off, through the unmodified production route; then
-//      fixtures/srt/basic.srt with every prompt option combination.
-//   4. check: compares each SRT result byte-for-byte with fixtures/legacy-baseline/,
-//      compares fingerprints of every request the app sent to the fake server
-//      with fixtures/legacy-requests.json (model, instructions, input, schema;
-//      hashes only), then runs guard checks — current expectations kept separate
-//      from the legacy baseline (e.g. the default file-size cap).
-//      capture: writes the SRT results and request fingerprints (refuses to
-//      overwrite without --overwrite).
+//      removal on and off; then fixtures/srt/basic.srt with every prompt option
+//      combination.
+//   4. check:
+//      - each SRT result must equal fixtures/expected/ byte-for-byte, and the
+//        fingerprints of every request sent must equal fixtures/expected/requests.json;
+//      - every result and request is also compared with the immutable Stage 0
+//        references (fixtures/legacy-baseline/, fixtures/legacy-requests.json):
+//        a difference is allowed only if fixtures/expected/changes.json lists
+//        the case with its reason (defect id); unlisted or stale entries fail;
+//      - guard checks (e.g. the default file-size cap).
+//      capture: writes fixtures/expected/ (refuses without --overwrite). The
+//      legacy references are never written.
 //
-// The legacy baseline records CURRENT behaviour, including known defects
-// (see fixtures/KNOWN_DEFECTS.md). A match means "unchanged", not "correct".
 // Logs contain only file names, sizes, hashes and structural diffs — never cue text.
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { startFakeOpenAI } from "./fake-openai.mjs";
 import { inspectSrt, compareStructure } from "./srt-structure.mjs";
-import { buildFingerprintFile, compareFingerprints } from "./request-fingerprint.mjs";
+import { buildFingerprintFile, changedCases, compareFingerprints } from "./request-fingerprint.mjs";
+import { reviewLegacyDiffs } from "./legacy-diff.mjs";
 import {
   ROOT,
   FIXTURES,
@@ -44,8 +46,11 @@ import {
   postFixture,
 } from "./app-server.mjs";
 
-const BASELINE = join(ROOT, "fixtures", "legacy-baseline");
-const FINGERPRINTS = join(ROOT, "fixtures", "legacy-requests.json");
+const LEGACY = join(ROOT, "fixtures", "legacy-baseline");
+const LEGACY_REQUESTS = join(ROOT, "fixtures", "legacy-requests.json");
+const EXPECTED = join(ROOT, "fixtures", "expected");
+const EXPECTED_REQUESTS = join(EXPECTED, "requests.json");
+const CHANGES = join(EXPECTED, "changes.json");
 const PORT = Number(process.env.BASELINE_PORT) || 3123;
 
 const VARIANTS = [
@@ -54,6 +59,9 @@ const VARIANTS = [
 ];
 
 const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 12);
+const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+const outputFiles = (dir) =>
+  existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".srt") || f.endsWith(".result.txt")) : [];
 
 async function runCase(fixture, variant) {
   const { ok, status, body } = await postFixture(PORT, fixture, {
@@ -63,14 +71,14 @@ async function runCase(fixture, variant) {
   const base = `${fixture.replace(/\.srt$/, "")}.${variant.name}`;
 
   if (ok) {
-    const complete = body
+    const final = body
       .split("\n")
       .filter((l) => l.trim())
       .map((l) => JSON.parse(l))
       .find((m) => m.type === "complete");
-    if (complete) return { name: base, file: `${base}.srt`, content: Buffer.from(complete.content, "utf8") };
+    if (final) return { name: base, file: `${base}.srt`, content: Buffer.from(final.content, "utf8") };
   }
-  // Non-success outcomes are part of the baseline too (status + raw body).
+  // Any other outcome is part of the expectations too (status + raw body).
   return { name: base, file: `${base}.result.txt`, content: Buffer.from(`HTTP ${status}\n${body}`, "utf8") };
 }
 
@@ -84,7 +92,7 @@ async function recordRequests(fake, requestsByCase, name, fn) {
   return result;
 }
 
-// Current expectations that are not part of the legacy baseline.
+// Current expectations that are not part of the regression references.
 async function runGuards() {
   const failures = [];
   const size = 600 * 1024;
@@ -102,6 +110,27 @@ async function runGuards() {
   return failures;
 }
 
+// Compares results with the immutable legacy references; every difference
+// must be explained in changes.json and every explanation must still apply.
+function checkAgainstLegacy(results, fingerprints, changes) {
+  const differing = new Set();
+  for (const r of results) {
+    const legacyPath = join(LEGACY, r.file);
+    if (!existsSync(legacyPath) || !readFileSync(legacyPath).equals(r.content)) differing.add(r.file);
+  }
+  const produced = new Set(results.map((r) => r.file));
+  for (const f of outputFiles(LEGACY)) if (!produced.has(f)) differing.add(f);
+
+  const reviews = [
+    reviewLegacyDiffs("output", [...differing], changes.outputs),
+    reviewLegacyDiffs("requests", changedCases(readJson(LEGACY_REQUESTS), fingerprints), changes.requests),
+  ];
+  for (const r of reviews) for (const line of r.lines) console.log(line);
+  const failures = reviews.flatMap((r) => r.failures);
+  if (!failures.length) console.log(`PASS  legacy differences: all explained in fixtures/expected/changes.json`);
+  return failures;
+}
+
 async function main() {
   const mode = process.argv[2] ?? "check";
   const overwrite = process.argv.includes("--overwrite");
@@ -109,16 +138,16 @@ async function main() {
     console.error("Usage: baseline.mjs [check | capture --overwrite]");
     return 2;
   }
-  const existing = existsSync(BASELINE) ? readdirSync(BASELINE).filter((f) => !f.startsWith(".")) : [];
-  if (mode === "capture" && (existing.length > 0 || existsSync(FINGERPRINTS)) && !overwrite) {
+  const existing = outputFiles(EXPECTED);
+  if (mode === "capture" && (existing.length > 0 || existsSync(EXPECTED_REQUESTS)) && !overwrite) {
     console.error(
-      `Refusing to overwrite the existing legacy baseline (${existing.length} file(s)) / request fingerprints.\n` +
+      `Refusing to overwrite fixtures/expected/ (${existing.length} file(s)).\n` +
         "Regeneration must be explicit: npm run baseline:capture -- --overwrite"
     );
     return 2;
   }
-  if (mode === "check" && (existing.length === 0 || !existsSync(FINGERPRINTS))) {
-    console.error("No legacy baseline or request fingerprints found. Capture them explicitly first.");
+  if (mode === "check" && (existing.length === 0 || !existsSync(EXPECTED_REQUESTS) || !existsSync(CHANGES))) {
+    console.error("fixtures/expected/ is incomplete. Capture it explicitly first.");
     return 2;
   }
 
@@ -154,13 +183,13 @@ async function main() {
   const fingerprints = buildFingerprintFile(requestsByCase);
 
   if (mode === "capture") {
-    if (existsSync(BASELINE)) rmSync(BASELINE, { recursive: true });
-    mkdirSync(BASELINE, { recursive: true });
+    mkdirSync(EXPECTED, { recursive: true });
+    for (const f of existing) if (!results.some((r) => r.file === f)) console.log(`note      ${f} is no longer produced; delete it`);
     for (const r of results) {
-      writeFileSync(join(BASELINE, r.file), r.content);
+      writeFileSync(join(EXPECTED, r.file), r.content);
       console.log(`captured  ${r.file}  (${r.content.length} B, ${sha(r.content)})`);
     }
-    writeFileSync(FINGERPRINTS, JSON.stringify(fingerprints, null, 2) + "\n");
+    writeFileSync(EXPECTED_REQUESTS, JSON.stringify(fingerprints, null, 2) + "\n");
     console.log(`captured  request fingerprints for ${Object.keys(fingerprints.cases).length} case(s)`);
     return 0;
   }
@@ -168,10 +197,10 @@ async function main() {
   let failures = 0;
   const produced = new Set(results.map((r) => r.file));
   for (const r of results) {
-    const path = join(BASELINE, r.file);
+    const path = join(EXPECTED, r.file);
     if (!existsSync(path)) {
       failures++;
-      console.log(`FAIL  ${r.file}  (no baseline file)`);
+      console.log(`FAIL  ${r.file}  (no expected file)`);
       continue;
     }
     const expected = readFileSync(path);
@@ -189,12 +218,12 @@ async function main() {
   for (const f of existing) {
     if (!produced.has(f)) {
       failures++;
-      console.log(`FAIL  ${f}  (baseline file no longer produced)`);
+      console.log(`FAIL  ${f}  (expected file no longer produced)`);
     }
   }
 
   const requestCount = Object.values(fingerprints.cases).reduce((n, c) => n + c.length, 0);
-  const fpDiffs = compareFingerprints(JSON.parse(readFileSync(FINGERPRINTS, "utf8")), fingerprints);
+  const fpDiffs = compareFingerprints(readJson(EXPECTED_REQUESTS), fingerprints);
   if (fpDiffs.length) {
     failures += fpDiffs.length;
     for (const d of fpDiffs) console.log(`FAIL  request fingerprint: ${d}`);
@@ -204,11 +233,12 @@ async function main() {
     );
   }
 
+  failures += checkAgainstLegacy(results, fingerprints, readJson(CHANGES)).length;
   failures += guardFailures.length;
   console.log(
     failures
       ? `\n${failures} failure(s)`
-      : `\nAll ${results.length} cases match the legacy baseline; request fingerprints and guard checks pass.`
+      : `\nAll ${results.length} cases match fixtures/expected/; request fingerprints, legacy differences and guard checks pass.`
   );
   return failures ? 1 : 0;
 }

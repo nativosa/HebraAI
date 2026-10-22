@@ -5,6 +5,9 @@
 //   { index, text_he: "[HE] " + text }
 // The "[HE] " marker makes English fallbacks (missing items) visible in output.
 //
+// The harness can script other answers (errors, malformed output, refusals,
+// delays) with setResponder(); see fakeReply() for the reply shape.
+//
 // Only requests carrying the expected fake bearer token are accepted, so a
 // real key can never be used by accident. Request bodies are never logged;
 // accepted bodies are kept in memory (`requests`) only so the harness can
@@ -14,22 +17,20 @@ import { createServer } from "node:http";
 
 export const FAKE_API_KEY = "sk-offline-fake-key-not-real";
 
-function responseFor(text) {
+// A Responses API object. `refusal` replaces the text with a refusal item;
+// `status: "incomplete"` needs `incompleteReason`.
+export function responseFor(text, { status = "completed", incompleteReason, refusal } = {}) {
+  const content = refusal
+    ? [{ type: "refusal", refusal }]
+    : [{ type: "output_text", text, annotations: [] }];
   return {
     id: "resp_fake",
     object: "response",
     created_at: 0,
-    status: "completed",
+    status,
+    incomplete_details: incompleteReason ? { reason: incompleteReason } : null,
     model: "fake-offline",
-    output: [
-      {
-        type: "message",
-        id: "msg_fake",
-        status: "completed",
-        role: "assistant",
-        content: [{ type: "output_text", text, annotations: [] }],
-      },
-    ],
+    output: [{ type: "message", id: "msg_fake", status, role: "assistant", content }],
     usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
   };
 }
@@ -46,13 +47,34 @@ export function echoItems(body) {
   };
 }
 
+// Reply shape a responder may return (all fields optional):
+//   { status: 429, headers: { "retry-after-ms": "5" }, error: "..." }  -> API error
+//   { outputText: "not json" } / { items: [...] }                      -> 200 with that output
+//   { response: {...} }                                                 -> 200 with a full object
+//   { delayMs: 500 }                                                    -> wait before replying
+// Returning undefined (or no responder) gives the default echo.
+function buildReply(reply, body) {
+  const echo = () => responseFor(JSON.stringify(echoItems(body)));
+  if (!reply) return { status: 200, headers: {}, json: echo() };
+  const headers = reply.headers ?? {};
+  if (reply.status && reply.status !== 200) {
+    return { status: reply.status, headers, json: { error: { message: reply.error ?? "fake error", code: reply.code ?? null } } };
+  }
+  if (reply.response) return { status: 200, headers, json: reply.response };
+  if (reply.items) return { status: 200, headers, json: responseFor(JSON.stringify({ items: reply.items })) };
+  if ("outputText" in reply) return { status: 200, headers, json: responseFor(reply.outputText) };
+  return { status: 200, headers, json: echo() };
+}
+
 export function startFakeOpenAI() {
   const stats = { requests: 0, rejected: 0 };
   const requests = [];
+  let responder = null;
 
   const server = createServer((req, res) => {
-    const send = (status, obj) => {
-      res.writeHead(status, { "Content-Type": "application/json" });
+    const send = (status, obj, headers = {}) => {
+      if (res.destroyed) return;
+      res.writeHead(status, { "Content-Type": "application/json", ...headers });
       res.end(JSON.stringify(obj));
     };
 
@@ -69,16 +91,20 @@ export function startFakeOpenAI() {
     req.setEncoding("utf8");
     req.on("data", (c) => (data += c));
     req.on("end", () => {
+      let body;
       try {
-        const body = JSON.parse(data);
-        const out = echoItems(body);
-        stats.requests++;
-        requests.push(body);
-        send(200, responseFor(JSON.stringify(out)));
+        body = JSON.parse(data);
+        echoItems(body); // validates the request shape
       } catch {
         stats.rejected++;
-        send(400, { error: { message: "fake server: could not parse request" } });
+        return send(400, { error: { message: "fake server: could not parse request" } });
       }
+      stats.requests++;
+      requests.push(body);
+      const reply = responder ? responder(body, requests.length) : undefined;
+      const { status, headers, json } = buildReply(reply, body);
+      if (reply?.delayMs) setTimeout(() => send(status, json, headers), reply.delayMs);
+      else send(status, json, headers);
     });
   });
 
@@ -89,7 +115,13 @@ export function startFakeOpenAI() {
         baseURL: `http://127.0.0.1:${port}/v1`,
         stats,
         requests,
-        close: () => new Promise((r) => server.close(r)),
+        // fn(body, requestNumber) -> reply | undefined; null restores the echo.
+        setResponder: (fn) => (responder = fn),
+        close: () =>
+          new Promise((r) => {
+            server.closeAllConnections?.();
+            server.close(r);
+          }),
       });
     });
   });

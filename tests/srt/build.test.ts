@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildSrt } from "@/lib/srt/build";
 import { parseSrt } from "@/lib/srt/parse";
-import { readLegacyBaseline, readSrtFixture } from "../helpers/fixtures";
+import { readExpected, readSrtFixture } from "../helpers/fixtures";
 
 describe("buildSrt", () => {
   it("writes index, timing line and text, separated by one blank line", () => {
@@ -27,7 +27,7 @@ describe("buildSrt", () => {
     expect(out).not.toContain("\r");
   });
 
-  // The Stage 0 baselines were produced by the app with the fake translator,
+  // The expected outputs were produced by the app with the fake translator,
   // which prefixes each text with "[HE] ". Rebuilding them from the parsed
   // baseline must reproduce the files byte-for-byte.
   it.each([
@@ -38,8 +38,8 @@ describe("buildSrt", () => {
     "multiline-italics.sfx-off.srt",
     "quirks.sfx-off.srt",
     "sfx-mixed.sfx-on.srt",
-  ])("round-trips legacy baseline %s", (name) => {
-    const baseline = readLegacyBaseline(name);
+  ])("round-trips expected output %s", (name) => {
+    const baseline = readExpected(name);
     expect(buildSrt(parseSrt(baseline))).toBe(baseline);
   });
 });

@@ -47,6 +47,12 @@ export function buildFingerprintFile(cases) {
   return { version: FINGERPRINT_VERSION, hash: "sha256(canonical JSON)", cases: out };
 }
 
+// Names of the cases whose requests differ (incl. cases present on one side only).
+export function changedCases(expected, actual) {
+  const names = new Set([...Object.keys(expected?.cases ?? {}), ...Object.keys(actual?.cases ?? {})]);
+  return [...names].sort().filter((n) => canonicalJson(expected?.cases?.[n] ?? null) !== canonicalJson(actual?.cases?.[n] ?? null));
+}
+
 // Returns human-readable differences (case, request number, field names only).
 export function compareFingerprints(expected, actual) {
   const diffs = [];

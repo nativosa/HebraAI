@@ -7,7 +7,7 @@ import {
   stripNonDialogueMarkers,
   toDialogueOnlyCueText,
 } from "@/lib/srt/sound-effects";
-import { readLegacyBaseline, readSrtFixture } from "../helpers/fixtures";
+import { readExpected, readSrtFixture } from "../helpers/fixtures";
 
 describe("stripHtmlTags", () => {
   it("removes tags and keeps their inner text", () => {
@@ -64,9 +64,9 @@ describe("isDialogueLike", () => {
 });
 
 describe("removeSoundEffectCues", () => {
-  it("matches the Stage 0 baseline for sfx-mixed.srt (texts, timings, LEGACY D10 numbering gaps)", () => {
+  it("matches the expected output for sfx-mixed.srt (texts, timings, LEGACY D10 numbering gaps)", () => {
     const filtered = removeSoundEffectCues(parseSrt(readSrtFixture("sfx-mixed.srt")));
-    const baseline = parseSrt(readLegacyBaseline("sfx-mixed.sfx-on.srt")).map((c) => ({
+    const baseline = parseSrt(readExpected("sfx-mixed.sfx-on.srt")).map((c) => ({
       ...c,
       text: c.text.replace(/^\[HE\] /, ""),
     }));

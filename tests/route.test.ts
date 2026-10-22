@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
-import { readGolden, readLegacyBaseline, readSrtFixture } from "./helpers/fixtures";
+import { readGolden, readExpected, readSrtFixture } from "./helpers/fixtures";
 import { stubModel } from "./helpers/stub-model";
 
 // Test-only replacement of the OpenAI client module: the route's client sends
@@ -123,7 +123,7 @@ describe("POST /api/translate: streaming", () => {
   // through the route, with the fake server's echo translator.
   const fixtures = ["basic", "crlf-bom", "duplicate-index", "multi-chunk", "multiline-italics", "quirks", "sfx-mixed"];
   it.each(fixtures.flatMap((f) => [[f, "sfx-on"], [f, "sfx-off"]]))(
-    "%s (%s) matches the legacy baseline",
+    "%s (%s) matches fixtures/expected",
     async (fixture, variant) => {
       const res = await post({
         ...UI_DEFAULTS,
@@ -131,7 +131,7 @@ describe("POST /api/translate: streaming", () => {
         file: fixtureFile(`${fixture}.srt`),
       });
       const complete = ndjson(await res.text()).find((m) => m.type === "complete");
-      expect(complete.content).toBe(readLegacyBaseline(`${fixture}.${variant}.srt`));
+      expect(complete.content).toBe(readExpected(`${fixture}.${variant}.srt`));
     }
   );
 });

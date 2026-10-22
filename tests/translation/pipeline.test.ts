@@ -3,7 +3,7 @@ import type { Cue } from "@/lib/srt/parse";
 import { parseSrt } from "@/lib/srt/parse";
 import { CHUNK_SIZE, chunk, translateCues, type StreamEvent } from "@/lib/translation/pipeline";
 import { buildChunkRequest } from "@/lib/translation/prompt";
-import { readGolden, readLegacyBaseline, readSrtFixture } from "../helpers/fixtures";
+import { readGolden, readExpected, readSrtFixture } from "../helpers/fixtures";
 import { itemsSent, stubModel } from "../helpers/stub-model";
 
 const golden = readGolden();
@@ -93,14 +93,14 @@ describe("translateCues: golden streams from the running app", () => {
     const g = golden.streams["multi-chunk.srt"];
     expect(model.calls.map((p) => itemsSent(p).length)).toEqual(g.requestItemCounts);
     expect(lines(events.filter((e) => e.type === "progress"))).toEqual(g.progressLines);
-    expect(events.at(-1)).toEqual({ type: "complete", content: readLegacyBaseline("multi-chunk.sfx-off.srt") });
+    expect(events.at(-1)).toEqual({ type: "complete", content: readExpected("multi-chunk.sfx-off.srt") });
   });
 
   it("LEGACY D1: duplicate-index.srt reproduces the baseline collision", async () => {
     const events = await collect(
       translateCues(stubModel().createResponse, parseSrt(readSrtFixture("duplicate-index.srt")), "instr")
     );
-    expect(events.at(-1)).toEqual({ type: "complete", content: readLegacyBaseline("duplicate-index.sfx-off.srt") });
+    expect(events.at(-1)).toEqual({ type: "complete", content: readExpected("duplicate-index.sfx-off.srt") });
   });
 });
 
