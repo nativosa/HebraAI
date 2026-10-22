@@ -16,7 +16,8 @@ LLM judge, no exact-string matching.
 
 Options: `--modes`, `--cases <ids|categories>`, `--sample <n>` (stratified
 across categories), `--repeat <n>`, `--cases-dir <dir>`, `--budget-usd <x>`,
-`--margin <x>`, `--save-outputs`, `--yes`. See the header of `scripts/eval.mjs`.
+`--margin <x>`, `--allow-partial`, `--save-outputs`, `--yes`. See the header of
+`scripts/eval.mjs`.
 
 Only implemented modes run (currently `classic`); `context`,
 `context+chars` and `context+oracle` are declared for Stage 3 and rejected
@@ -29,9 +30,20 @@ until the app supports them.
   separately.
 - Prices come from `OPENAI_PRICE_INPUT_PER_MTOK` / `OPENAI_PRICE_OUTPUT_PER_MTOK`
   (environment or `.env.local`); a real run refuses without them.
-- Per-run budget `--budget-usd` (default **$0.50**). A case starts only if
-  `spent + estimate × margin` (default margin 1.5) fits; at the first case
-  that does not fit, the run stops and lists the cases not started.
+- Per-run budget `--budget-usd` (default **$0.50**). Before anything
+  starts, the whole plan × margin (default 1.5) is compared with the budget;
+  if it does not fit, the run refuses unless `--allow-partial` is given.
+- During the run, a case starts only if `spent + estimate × margin` fits; at
+  the first case that does not fit, the run stops and lists the cases not
+  started.
+- Cases run round-robin across categories (all modes of a case together),
+  so a run stopped by the budget still covers every category and mode.
+- Spending counts each case's reported cost plus every retry at the
+  estimated cost of one request (failed attempts report no tokens but may
+  be billed).
+- The plan shows the **worst case**: the most expensive single case if every
+  chunk used all `MAX_ATTEMPTS_PER_CHUNK` attempts. A started case is not cut
+  off, so this is the most a run can overshoot its budget.
 - Token estimates are conservative (≈3 characters per input token, ≈2 per
   Hebrew output token, plus a reasoning allowance equal to the output).
 - **The budget is an estimate, not a billing limit**: usage is known only
@@ -48,7 +60,7 @@ categories, check results and metrics only — never subtitle or model text.
 
 ## Datasets
 
-- `eval/cases/synthetic/` — 86 synthetic cases written for this project
+- `eval/cases/synthetic/` — 87 synthetic cases written for this project
   (no copyrighted text), with hand-written Hebrew references.
 - A **private dataset** of real subtitle excerpts can live in
   `fixtures/private/eval-cases/` (git-ignored) and be run with
@@ -58,10 +70,25 @@ categories, check results and metrics only — never subtitle or model text.
 ## Case format
 
 See the header of `eval/lib/cases.mjs` and the checks in `eval/lib/checks.mjs`.
-Each case carries a hand-written correct `reference` and a deliberately
-`wrong` output; `npm test` requires the reference to pass every check and the
-wrong output to fail exactly `wrongFails` — this validates the checks
-themselves.
+Each case carries a hand-written correct `reference`, optional `accepted`
+alternative outputs and a deliberately `wrong` output. `npm test` requires
+the reference and every accepted output to pass every check and the wrong
+output to fail exactly `wrongFails` — this validates the checks themselves.
+
+Scoring behaviour:
+- `anyOf` may list `neutral` phrasings with the same meaning (e.g. נראה לי
+  for "I think", צדקת for "you're right"). They pass and are counted as
+  *neutral* (gender not expressed) per dimension in reports. Wrong-gender
+  forms are separate `noneOf` checks that neutral phrasings never relax; the
+  dataset test requires every neutral alternative to be exercised by an
+  accepted output and to contain no form forbidden for the same cue.
+- `prefixes: "ו"` limits short verbs and imperatives to an optional "and"
+  (so חכה does not match מחכה); the default allows up to four of ו ה ב כ ל מ ש.
+- `ignoreGeresh` treats punctuation-only differences (ג'ון / גון) as the same
+  spelling for names; different transliterations stay different.
+- `anyText` matches symbols next to digits ("$") and spelled-out values
+  ("שבע וחצי") as substrings.
+- Filler lines are statements only (Hebrew imperatives are gendered).
 
 Rules:
 - Character gender never implies who speaks a line. Unlabeled alternating
@@ -72,6 +99,18 @@ Rules:
   `hebrewName`. The oracle mode sends exactly these; references, wrong
   outputs, checks and expected forms never reach a request, and there are no
   per-cue speaker assignments (enforced by validation and tests).
+
+## Dataset changes
+
+- **v2 (Stage 3, Checkpoint A review):** neutral phrasings and missing valid
+  alternatives accepted (15 cases); short imperatives restricted to the ו
+  prefix (7 cases); geresh-insensitive names; times and "$" matched as text;
+  contradictions removed (pl-06, sa-08, cc-07, amb-02, alt-01); explicit
+  chunk-1 evidence in cc-05; natural references in alt-02 and cc-02;
+  "break a leg" accepts בהצלחה and the theatre slang שבור רגל in a theatre
+  (mn-04), while a new non-theatre case (mn-07) still rejects literal and
+  slang forms. No wrong-gender check was removed.
+- **v1:** initial 86 cases.
 
 ## Interpreting results
 
