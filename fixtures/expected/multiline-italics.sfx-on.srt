@@ -5,7 +5,7 @@ you here again.
 
 2
 00:00:13,500 --> 00:00:15,000
-[HE] Neither did I.
+[HE] <i>Neither did I.</i>
 
 3
 00:00:15,200 --> 00:00:18,000
@@ -14,5 +14,5 @@ you here again.
 
 4
 00:00:18,500 --> 00:00:21,000
-[HE] She told me you were
+[HE] <i>She told me</i> you were
 leaving for good.
