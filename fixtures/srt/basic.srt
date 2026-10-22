@@ -1,0 +1,15 @@
+1
+00:00:01,000 --> 00:00:03,000
+Hello there.
+
+2
+00:00:03,500 --> 00:00:05,200
+Are you coming with us tonight?
+
+3
+00:00:05,400 --> 00:00:07,000
+I'm tired, but I'll come.
+
+4
+00:00:07,500 --> 00:00:09,900
+Thanks, it's 7:30, don't be late!

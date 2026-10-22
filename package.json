@@ -3,17 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -H 127.0.0.1",
+    "lint": "eslint",
+    "baseline:check": "node scripts/baseline.mjs check",
+    "baseline:capture": "node scripts/baseline.mjs capture",
+    "check:openai-endpoint": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-openai-endpoint.mjs",
+    "srt:inspect": "node scripts/srt-structure.mjs inspect",
+    "srt:compare": "node scripts/srt-structure.mjs compare"
   },
   "dependencies": {
     "next": "16.0.10",
     "openai": "^6.10.0",
     "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "redis": "^5.10.0"
+    "react-dom": "19.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

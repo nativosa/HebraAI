@@ -1,12 +1,18 @@
-import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { rateLimitOrThrow } from "@/lib/ratelimit";
+import { errorMessage } from "@/lib/errors";
+import { createOpenAIClient } from "@/lib/openai-client";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
-const MAX_FILE_SIZE_BYTES = 512 * 1024; // 0.5 MB
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const DEFAULT_MAX_FILE_SIZE_BYTES = 512 * 1024; // 0.5 MB
+
+function getMaxFileSizeBytes(): number {
+  const n = Number(process.env.MAX_FILE_SIZE_BYTES);
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_FILE_SIZE_BYTES;
+}
+
+const client = createOpenAIClient();
 
 type Cue = {
   index: number;
@@ -52,33 +58,6 @@ function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
-}
-
-function isSoundEffectCue(text: string): boolean {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  if (lines.length === 0) return false;
-
-  // Remove the cue ONLY if every non-empty line
-  // is entirely wrapped in parentheses or brackets
-  return lines.every(isSoundEffectLineSingle);
-}
-
-
-function isSoundEffectLineSingle(line: string): boolean {
-  // Entire line is (...) → sound effect (includes names, voices, SFX)
-  if (/^\([^)]*\)$/.test(line)) return true;
-
-  // Entire line is [...] → sound effect
-  if (/^\[[^\]]+\]$/.test(line)) return true;
-
-  // Musical cues
-  if (/^♪.*♪$/.test(line)) return true;
-
-  return false;
 }
 
 // Removes simple HTML tags but preserves the inner text.
@@ -127,38 +106,10 @@ function isDialogueLike(text: string): boolean {
   return /[A-Za-z\u0590-\u05FF0-9]/.test(text);
 }
 
-function getClientIp(req: Request): string {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  return "unknown";
-}
-
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
-  }
-
-  const ip = getClientIp(req);
-
-  // 2 requests per 120 seconds per IP
-  const rl = await rateLimitOrThrow({
-    key: `translate:${ip}`,
-    limit: 2,
-    windowSec: 120,
-  });
-
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      {
-        status: 429,
-        headers: {
-          "X-RateLimit-Limit": "10",
-          "X-RateLimit-Remaining": String(rl.remaining),
-        },
-      }
-    );
   }
 
   const form = await req.formData();
@@ -171,11 +122,12 @@ export async function POST(req: Request) {
     );
   }
 
-  if (file.size > MAX_FILE_SIZE_BYTES) {
+  const maxFileSizeBytes = getMaxFileSizeBytes();
+  if (file.size > maxFileSizeBytes) {
     return NextResponse.json(
       {
         error: "File too large",
-        maxBytes: MAX_FILE_SIZE_BYTES,
+        maxBytes: maxFileSizeBytes,
         receivedBytes: file.size,
       },
       { status: 413 }
@@ -263,87 +215,137 @@ export async function POST(req: Request) {
   // --- Chunking ---
   const cuesChunks = chunk(filteredCues, 60);
 
-  // --- Translation loop ---
+  // --- Translation loop with streaming progress ---
   const translated: Cue[] = [];
+  const totalChunks = cuesChunks.length;
+  
+  // Create a readable stream for the translation
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for (let chunkIndex = 0; chunkIndex < cuesChunks.length; chunkIndex++) {
+          const cuesPart = cuesChunks[chunkIndex];
+          const payload = cuesPart.map((c) => ({ index: c.index, text: c.text }));
 
-  for (const cuesPart of cuesChunks) {
-    const payload = cuesPart.map((c) => ({ index: c.index, text: c.text }));
-
-    const response = await client.responses.create({
-      model: "gpt-5.2",
-      instructions,
-      input: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text:
-                "Translate this JSON array of subtitle items.\n" +
-                "Return a JSON object with key 'items' which is an array of {index, text_he}.\n\n" +
-                JSON.stringify(payload),
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "subtitle_translation",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              items: {
-                type: "array",
-                items: {
+          const response = await client.responses.create({
+            model: "gpt-5.2",
+            instructions,
+            input: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "input_text",
+                    text:
+                      "Translate this JSON array of subtitle items.\n" +
+                      "Return a JSON object with key 'items' which is an array of {index, text_he}.\n\n" +
+                      JSON.stringify(payload),
+                  },
+                ],
+              },
+            ],
+            text: {
+              format: {
+                type: "json_schema",
+                name: "subtitle_translation",
+                strict: true,
+                schema: {
                   type: "object",
                   properties: {
-                    index: { type: "number" },
-                    text_he: { type: "string" },
+                    items: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          index: { type: "number" },
+                          text_he: { type: "string" },
+                        },
+                        required: ["index", "text_he"],
+                        additionalProperties: false,
+                      },
+                    },
                   },
-                  required: ["index", "text_he"],
+                  required: ["items"],
                   additionalProperties: false,
                 },
               },
             },
-            required: ["items"],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
+          });
 
-    let json: { items: { index: number; text_he: string }[] };
-    try {
-      json = JSON.parse(response.output_text);
-    } catch (e) {
-      return NextResponse.json(
-        {
-          error: "Model returned invalid JSON (unexpected).",
-          details: response.output_text?.slice(0, 500),
-        },
-        { status: 502 }
-      );
-    }
+          let json: { items: { index: number; text_he: string }[] };
+          try {
+            json = JSON.parse(response.output_text);
+          } catch {
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  type: "error",
+                  message: "Model returned invalid JSON (unexpected).",
+                  details: response.output_text?.slice(0, 500),
+                }) + "\n"
+              )
+            );
+            controller.close();
+            return;
+          }
 
-    const map = new Map<number, string>(json.items.map((x) => [x.index, x.text_he]));
+          const map = new Map<number, string>(json.items.map((x) => [x.index, x.text_he]));
 
-    for (const c of cuesPart) {
-      const he = map.get(c.index);
-      translated.push({
-        ...c,
-        text: (he ?? c.text).trim(),
-      });
-    }
-  }
+          for (const c of cuesPart) {
+            const he = map.get(c.index);
+            translated.push({
+              ...c,
+              text: (he ?? c.text).trim(),
+            });
+          }
+          
+          // Send progress update
+          const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({
+                type: "progress",
+                progress,
+                currentChunk: chunkIndex + 1,
+                totalChunks,
+              }) + "\n"
+            )
+          );
+        }
 
-  const outSrt = buildSrt(translated);
+        // Sort translated cues by index to maintain order
+        translated.sort((a, b) => a.index - b.index);
+        const outSrt = buildSrt(translated);
 
-  return new NextResponse(outSrt, {
+        // Send final SRT content
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({
+              type: "complete",
+              content: outSrt,
+            }) + "\n"
+          )
+        );
+        controller.close();
+      } catch (error) {
+        controller.enqueue(
+          encoder.encode(
+            JSON.stringify({
+              type: "error",
+              message: errorMessage(error),
+            }) + "\n"
+          )
+        );
+        controller.close();
+      }
+    },
+  });
+
+  return new NextResponse(stream, {
     headers: {
-      "Content-Type": "application/x-subrip; charset=utf-8",
-      "Content-Disposition": `attachment; filename="translated.he.srt"`,
+      "Content-Type": "application/x-ndjson",
+      "Transfer-Encoding": "chunked",
     },
   });
 }

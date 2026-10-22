@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HebraAI Subtitles
 
-## Getting Started
+Personal, single-user tool that translates English `.srt` subtitle files into
+Hebrew with the OpenAI API. Upload, adjust settings, translate, review
+side by side, and download.
 
-First, run the development server:
+Built with Next.js (App Router), React and Tailwind CSS.
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # then set OPENAI_API_KEY
+npm run dev                  # http://127.0.0.1:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Required | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | yes | Read only by the server route `src/app/api/translate/route.ts`. Never sent to the browser. |
+| `MAX_FILE_SIZE_BYTES` | no | Upload size limit in bytes. Default `524288` (512 KB). Larger files get HTTP 413. |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local` is git-ignored. Never commit real keys.
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server on `127.0.0.1:3000` |
+| `npm run build` / `npm start` | Production build / server on `127.0.0.1:3000` |
+| `npm run lint` | ESLint |
+| `npm run baseline:check` | Offline regression check: no OpenAI calls (see below) |
+| `npm run baseline:capture -- --overwrite` | Explicitly regenerate the legacy baseline |
+| `npm run check:openai-endpoint` | Offline check that only the official OpenAI endpoint can be used outside test mode |
+| `npm run srt:inspect <file>` | Print the structure of an SRT file (cue count, indices, BOM/EOL, hash) |
+| `npm run srt:compare <a> <b>` | Compare two SRT files' cue numbering and timestamps (ignores text) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Regression baseline (free, offline)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`npm run baseline:check` builds the app, starts it on `127.0.0.1:3123` with a
+fake API key and a local fake OpenAI server, runs every file in
+`fixtures/srt/` through `/api/translate`, and compares the output byte-for-byte
+with `fixtures/legacy-baseline/`. The baseline records current behaviour,
+**including known defects** (`fixtures/KNOWN_DEFECTS.md`), so a pass means
+"unchanged", not "correct". See `fixtures/README.md`.
 
-## Deploy on Vercel
+Real (paid) translations are never run automatically. Put private subtitle
+files and real outputs in `fixtures/private/`, which is git-ignored.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Security notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The OpenAI key is used only server-side.
+- The server always calls the official endpoint (`https://api.openai.com/v1`);
+  an inherited `OPENAI_BASE_URL` is ignored. Only the offline harness can
+  change it, via `HEBRAAI_OFFLINE_TEST_MODE=1`, which accepts nothing but a
+  loopback `http://127.0.0.1` / `http://[::1]` URL together with the fake test
+  key; any other combination makes the translate route fail closed without
+  sending a request (`npm run check:openai-endpoint`).
+- `dev` and `start` bind to `127.0.0.1`, so the app is not reachable from other
+  machines on your network.
+- **Localhost binding is not authentication.** If you ever deploy this app or
+  expose it publicly (port forwarding, tunnels, hosting), add authentication
+  and rate limiting first. Otherwise anyone who can reach it can spend your
+  OpenAI credits.
+
+## Troubleshooting
+
+**Windows: `npm run build` fails with `Invariant: Expected workUnitAsyncStorage
+to have a store`.** The terminal's current directory uses different letter case
+from the folder on disk (e.g. `cd C:\git\HebraAI` when the folder is
+`C:\GIT\HebraAI`). npm's `next.cmd` shim launches Next.js from the on-disk
+spelling while the project root keeps the typed one, so Node loads two copies
+of Next's internal modules. Open the terminal in the exactly-cased path, or
+rename the folder so its case matches what you type.
