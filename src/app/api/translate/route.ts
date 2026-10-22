@@ -1,9 +1,15 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { rateLimitOrThrow } from "@/lib/ratelimit";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
+
+const DEFAULT_MAX_FILE_SIZE_BYTES = 512 * 1024; // 0.5 MB
+
+function getMaxFileSizeBytes(): number {
+  const n = Number(process.env.MAX_FILE_SIZE_BYTES);
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_FILE_SIZE_BYTES;
+}
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -142,6 +148,17 @@ export async function POST(req: Request) {
     );
   }
 
+  const maxFileSizeBytes = getMaxFileSizeBytes();
+  if (file.size > maxFileSizeBytes) {
+    return NextResponse.json(
+      {
+        error: "File too large",
+        maxBytes: maxFileSizeBytes,
+        receivedBytes: file.size,
+      },
+      { status: 413 }
+    );
+  }
 
   // --- Inputs (sanitize) ---
   const toneRaw = (form.get("tone") as string) || "Neutral";

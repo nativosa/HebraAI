@@ -13,7 +13,9 @@
 //      running `next dev` (which holds the .next/dev lock).
 //   3. POSTs every fixture in fixtures/srt/ to /api/translate, with sound-effect
 //      removal on and off, through the unmodified production route.
-//   4. check: compares each result byte-for-byte with fixtures/legacy-baseline/.
+//   4. check: compares each result byte-for-byte with fixtures/legacy-baseline/,
+//      then runs guard checks — current expectations kept separate from the
+//      legacy baseline (e.g. the default file-size cap).
 //      capture: writes the results there (refuses to overwrite without --overwrite).
 //
 // The legacy baseline records CURRENT behaviour, including known defects
@@ -52,6 +54,7 @@ function startNext(baseURL) {
     NEXT_TELEMETRY_DISABLED: "1",
   };
   delete env.NODE_ENV;
+  delete env.MAX_FILE_SIZE_BYTES; // guard checks assume the default cap
   console.log("building (next build)…");
   try {
     execFileSync(process.execPath, [nextBin, "build"], { cwd: ROOT, env, stdio: "pipe" });
@@ -124,6 +127,24 @@ async function runCase(fixture, variant) {
   return { file: `${base}.result.txt`, content: Buffer.from(`HTTP ${res.status}\n${body}`, "utf8") };
 }
 
+// Current expectations that are not part of the legacy baseline.
+async function runGuards() {
+  const failures = [];
+  const size = 600 * 1024;
+  const fd = new FormData();
+  fd.append("file", new File([Buffer.alloc(size, "a")], "too-big.srt"));
+  const res = await fetch(`${APP}/api/translate`, { method: "POST", body: fd });
+  const body = await res.json().catch(() => null);
+  const ok =
+    res.status === 413 &&
+    body?.error === "File too large" &&
+    body?.maxBytes === 512 * 1024 &&
+    body?.receivedBytes === size;
+  console.log(`${ok ? "PASS" : "FAIL"}  guard: ${size} B upload -> HTTP ${res.status} ${JSON.stringify(body)}`);
+  if (!ok) failures.push("size cap");
+  return failures;
+}
+
 async function main() {
   const mode = process.argv[2] ?? "check";
   const overwrite = process.argv.includes("--overwrite");
@@ -148,12 +169,14 @@ async function main() {
   const fake = await startFakeOpenAI();
   const { child, getLog } = startNext(fake.baseURL);
   const results = [];
+  let guardFailures = [];
 
   try {
     await waitForServer(child, getLog);
     for (const fixture of fixtures) {
       for (const variant of VARIANTS) results.push(await runCase(fixture, variant));
     }
+    if (mode === "check") guardFailures = await runGuards();
   } finally {
     stopNext(child);
     await fake.close();
@@ -202,7 +225,12 @@ async function main() {
       console.log(`FAIL  ${f}  (baseline file no longer produced)`);
     }
   }
-  console.log(failures ? `\n${failures} failure(s)` : `\nAll ${results.length} cases match the legacy baseline.`);
+  failures += guardFailures.length;
+  console.log(
+    failures
+      ? `\n${failures} failure(s)`
+      : `\nAll ${results.length} cases match the legacy baseline; guard checks pass.`
+  );
   return failures ? 1 : 0;
 }
 
