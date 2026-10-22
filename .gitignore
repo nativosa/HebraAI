@@ -44,3 +44,6 @@ test.srt
 
 # private subtitle files and real (paid) translation outputs
 fixtures/private/
+
+# evaluation run results (ids, scores and metrics; may describe private datasets)
+eval/results/
