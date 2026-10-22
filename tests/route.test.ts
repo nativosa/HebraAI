@@ -97,13 +97,39 @@ describe("POST /api/translate: request guards", () => {
 });
 
 describe("POST /api/translate: streaming", () => {
-  it("streams the captured NDJSON for basic.srt", async () => {
+  // Progress lines and content as captured in Stage 0; the final event now
+  // also carries the report.
+  it("streams the captured progress lines and content for basic.srt", async () => {
     const res = await post({ ...UI_DEFAULTS, removeSoundEffects: "false", file: fixtureFile("basic.srt") });
     expect(res.status).toBe(golden.streams["basic.srt"].status);
     expect(res.headers.get("content-type")).toBe("application/x-ndjson");
     const body = await res.text();
     expect(body.endsWith("\n")).toBe(true);
-    expect(body.split("\n").filter(Boolean)).toEqual(golden.streams["basic.srt"].lines);
+    const captured: string[] = golden.streams["basic.srt"].lines;
+    const lines = body.split("\n").filter(Boolean);
+    expect(lines.slice(0, -1)).toEqual(captured.slice(0, -1));
+    expect(JSON.parse(lines.at(-1)!)).toEqual({
+      ...JSON.parse(captured.at(-1)!),
+      report: {
+        cues: 4,
+        translated: 4,
+        removedSoundEffectCues: 0,
+        parse: { recovered: [], unparsed: [] },
+      },
+    });
+  });
+
+  it("reports recovered and unparsed input in the final event", async () => {
+    const res = await post({ ...UI_DEFAULTS, removeSoundEffects: "false", file: fixtureFile("quirks.srt") });
+    const final = ndjson(await res.text()).at(-1);
+    expect(final.type).toBe("complete");
+    expect(final.report.parse.unparsed).toEqual([{ line: 20, lines: 1, kind: "orphan-text" }]);
+    expect(final.report.parse.recovered.map((r: { kind: string }) => r.kind)).toEqual([
+      "dot-separator",
+      "missing-number",
+      "short-hour",
+      "empty-cue",
+    ]);
   });
 
   it("sends the captured instructions for the chosen options", async () => {

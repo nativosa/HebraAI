@@ -8,6 +8,7 @@ import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
+import { describeParseReport } from "@/lib/translation/report";
 import { readTranslationStream } from "@/lib/translation/stream-client";
 import type { Settings } from "@/lib/types";
 
@@ -18,6 +19,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [notices, setNotices] = useState<string[]>([]);
 
   const [settings, setSettings] = useState<Settings>({
     tone: "Neutral",
@@ -60,6 +62,7 @@ export default function Home() {
 
   function onFileSelected(f: File | null) {
     setError(null);
+    setNotices([]);
     setProgress(0);
     setPreviewEn("");
     setPreviewHe("");
@@ -89,6 +92,7 @@ export default function Home() {
 
     setBusy(true);
     setError(null);
+    setNotices([]);
     setProgress(5);
 
     try {
@@ -111,10 +115,11 @@ export default function Home() {
       }
 
       // Handle streaming response
-      const translatedText = await readTranslationStream(res, { onProgress: setProgress });
+      const result = await readTranslationStream(res, { onProgress: setProgress });
 
-      setPreviewHe(translatedText);
-      setTranslatedSrt(translatedText);
+      setPreviewHe(result.content);
+      setTranslatedSrt(result.content);
+      setNotices(result.report ? describeParseReport(result.report.parse) : []);
     } catch (err) {
       setError(errorMessage(err));
       setProgress(0);
@@ -171,6 +176,7 @@ export default function Home() {
                   busy={busy}
                   progress={progress}
                   error={error}
+                  notices={notices}
                   onTranslate={onTranslate}
                 />
               </div>

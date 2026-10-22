@@ -65,27 +65,30 @@ describe("isDialogueLike", () => {
 
 describe("removeSoundEffectCues", () => {
   it("matches the expected output for sfx-mixed.srt (texts, timings, LEGACY D10 numbering gaps)", () => {
-    const filtered = removeSoundEffectCues(parseSrt(readSrtFixture("sfx-mixed.srt")));
-    const baseline = parseSrt(readExpected("sfx-mixed.sfx-on.srt")).map((c) => ({
+    const filtered = removeSoundEffectCues(parseSrt(readSrtFixture("sfx-mixed.srt")).cues);
+    // Expected output cues minus the fake translator's prefix; the surviving
+    // cues' ids are their input positions, which equal their numbers here.
+    const baseline = parseSrt(readExpected("sfx-mixed.sfx-on.srt")).cues.map((c) => ({
       ...c,
+      id: c.number!,
       text: c.text.replace(/^\[HE\] /, ""),
     }));
     expect(filtered).toEqual(baseline);
-    expect(filtered.map((c) => c.index)).toEqual([4, 5, 7, 8]);
+    expect(filtered.map((c) => c.number)).toEqual([4, 5, 7, 8]);
   });
 
   it("drops a cue whose remainder has no dialogue characters", () => {
-    const cue = { index: 1, start: "00:00:01,000", end: "00:00:02,000", text: "(gasps) ... [thud] !" };
+    const cue = { id: 1, number: 1, start: "00:00:01,000", end: "00:00:02,000", text: "(gasps) ... [thud] !" };
     expect(removeSoundEffectCues([cue])).toEqual([]);
   });
 
   it("keeps the leftover of nested parentheses when it contains letters", () => {
-    const cue = { index: 1, start: "00:00:01,000", end: "00:00:02,000", text: "(a (b) c)" };
+    const cue = { id: 1, number: 1, start: "00:00:01,000", end: "00:00:02,000", text: "(a (b) c)" };
     expect(removeSoundEffectCues([cue])).toEqual([{ ...cue, text: "c)" }]);
   });
 
   it("does not modify the input cues", () => {
-    const cues = [{ index: 1, start: "00:00:01,000", end: "00:00:02,000", text: "Hi (sighs)" }];
+    const cues = [{ id: 1, number: 1, start: "00:00:01,000", end: "00:00:02,000", text: "Hi (sighs)" }];
     removeSoundEffectCues(cues);
     expect(cues[0].text).toBe("Hi (sighs)");
   });

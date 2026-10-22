@@ -5,6 +5,8 @@ type Props = {
   busy: boolean;
   progress: number;
   error: string | null;
+  // Notes about the input file (recovered or unparsed content).
+  notices: string[];
   onTranslate: () => void;
 };
 
@@ -13,6 +15,7 @@ export default function TranslatePanel({
   busy,
   progress,
   error,
+  notices,
   onTranslate,
 }: Props) {
   return (
@@ -43,6 +46,17 @@ export default function TranslatePanel({
             : "Idle"}
         </div>
       </div>
+
+      {notices.length > 0 && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <div className="text-sm font-semibold text-amber-900">Input file notes</div>
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-amber-900">
+            {notices.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && (
         <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">

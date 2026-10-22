@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Cue } from "@/lib/srt/parse";
 import { applyChunkTranslation, parseChunkOutput, type ChunkTranslation } from "@/lib/translation/response";
-
-const cue = (index: number, text: string): Cue => ({ index, start: "00:00:01,000", end: "00:00:02,000", text });
+import { cue } from "../helpers/cues";
 
 describe("parseChunkOutput", () => {
   it("parses valid JSON", () => {
@@ -66,14 +64,15 @@ describe("applyChunkTranslation", () => {
     expect(applyChunkTranslation([cue(1, "Hi")], json)).toEqual([cue(1, "Hi")]);
   });
 
-  it("LEGACY D1: cues sharing an index get the same (last) translation", () => {
+  it("D1 (fixed): cues sharing an SRT number are matched by id", () => {
     const json = {
       items: [
         { index: 2, text_he: "A" },
-        { index: 2, text_he: "B" },
+        { index: 3, text_he: "B" },
       ],
     };
-    expect(applyChunkTranslation([cue(2, "a"), cue(2, "b")], json)).toEqual([cue(2, "B"), cue(2, "B")]);
+    const input = [cue(2, "a", { number: 2 }), cue(3, "b", { number: 2 })];
+    expect(applyChunkTranslation(input, json)).toEqual([cue(2, "A", { number: 2 }), cue(3, "B", { number: 2 })]);
   });
 
   // Malformed shapes are not validated (Stage 2 adds application errors);

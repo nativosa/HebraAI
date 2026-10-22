@@ -1,21 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Cue } from "@/lib/srt/parse";
 import { parseSrt } from "@/lib/srt/parse";
 import { CHUNK_SIZE, chunk, translateCues, type StreamEvent } from "@/lib/translation/pipeline";
 import { buildChunkRequest } from "@/lib/translation/prompt";
+import { cue, cues } from "../helpers/cues";
 import { readGolden, readExpected, readSrtFixture } from "../helpers/fixtures";
 import { itemsSent, stubModel } from "../helpers/stub-model";
 
 const golden = readGolden();
 
-function cues(n: number): Cue[] {
-  return Array.from({ length: n }, (_, i) => ({
-    index: i + 1,
-    start: "00:00:01,000",
-    end: "00:00:02,000",
-    text: `Line ${i + 1}`,
-  }));
-}
 
 async function collect(gen: AsyncGenerator<StreamEvent>): Promise<StreamEvent[]> {
   const events: StreamEvent[] = [];
@@ -78,42 +70,62 @@ describe("translateCues: chunk boundaries", () => {
 });
 
 describe("translateCues: golden streams from the running app", () => {
-  it("basic.srt produces the captured NDJSON lines", async () => {
+  // Stage 2 adds a report to the final event; progress lines and the SRT
+  // content are unchanged from the captured stream.
+  it("basic.srt produces the captured progress lines and content", async () => {
     const events = await collect(
-      translateCues(stubModel().createResponse, parseSrt(readSrtFixture("basic.srt")), "instr")
+      translateCues(stubModel().createResponse, parseSrt(readSrtFixture("basic.srt")).cues, "instr")
     );
-    expect(lines(events)).toEqual(golden.streams["basic.srt"].lines);
+    const captured = golden.streams["basic.srt"].lines.map((l: string) => JSON.parse(l));
+    expect(lines(events.slice(0, -1))).toEqual(golden.streams["basic.srt"].lines.slice(0, -1));
+    expect(events.at(-1)).toMatchObject({ type: "complete", content: captured.at(-1).content });
   });
 
   it("multi-chunk.srt produces the captured requests, progress lines and baseline SRT", async () => {
     const model = stubModel();
     const events = await collect(
-      translateCues(model.createResponse, parseSrt(readSrtFixture("multi-chunk.srt")), "instr")
+      translateCues(model.createResponse, parseSrt(readSrtFixture("multi-chunk.srt")).cues, "instr")
     );
     const g = golden.streams["multi-chunk.srt"];
     expect(model.calls.map((p) => itemsSent(p).length)).toEqual(g.requestItemCounts);
     expect(lines(events.filter((e) => e.type === "progress"))).toEqual(g.progressLines);
-    expect(events.at(-1)).toEqual({ type: "complete", content: readExpected("multi-chunk.sfx-off.srt") });
+    expect(events.at(-1)).toMatchObject({ type: "complete", content: readExpected("multi-chunk.sfx-off.srt") });
   });
 
-  it("LEGACY D1: duplicate-index.srt reproduces the baseline collision", async () => {
+  it("D1 (fixed): cues sharing a number keep their own translations", async () => {
     const events = await collect(
-      translateCues(stubModel().createResponse, parseSrt(readSrtFixture("duplicate-index.srt")), "instr")
+      translateCues(stubModel().createResponse, parseSrt(readSrtFixture("duplicate-index.srt")).cues, "instr")
     );
-    expect(events.at(-1)).toEqual({ type: "complete", content: readExpected("duplicate-index.sfx-off.srt") });
+    const content = readExpected("duplicate-index.sfx-off.srt");
+    expect(events.at(-1)).toMatchObject({ type: "complete", content });
+    expect(content).toContain("2\n00:00:02,500 --> 00:00:03,500\n[HE] Second line.\n");
+    expect(content).toContain("2\n00:00:04,000 --> 00:00:05,000\n[HE] A different second line.\n");
   });
 });
 
-describe("translateCues: output order", () => {
-  it("sorts translated cues by index across chunks", async () => {
-    const input = [3, 1, 2].map((i) => ({ index: i, start: `00:00:0${i},000`, end: `00:00:0${i},500`, text: `L${i}` }));
+describe("translateCues: output order and report", () => {
+  it("keeps the input order, even when numbers are out of order", async () => {
+    const input = [3, 1, 2].map((n, i) =>
+      cue(i + 1, `L${n}`, { number: n, start: `00:00:0${n},000`, end: `00:00:0${n},500` })
+    );
     const events = await collect(translateCues(stubModel().createResponse, input, "instr"));
-    expect(events.at(-1)).toEqual({
+    expect(events.at(-1)).toMatchObject({
       type: "complete",
       content:
+        "3\n00:00:03,000 --> 00:00:03,500\n[HE] L3\n\n" +
         "1\n00:00:01,000 --> 00:00:01,500\n[HE] L1\n\n" +
-        "2\n00:00:02,000 --> 00:00:02,500\n[HE] L2\n\n" +
-        "3\n00:00:03,000 --> 00:00:03,500\n[HE] L3\n",
+        "2\n00:00:02,000 --> 00:00:02,500\n[HE] L2\n",
+    });
+  });
+
+  it("reports counts and carries the input context", async () => {
+    const parse = { recovered: [{ line: 9, kind: "missing-number" as const }], unparsed: [] };
+    const events = await collect(
+      translateCues(stubModel().createResponse, cues(3), "instr", { parse, removedSoundEffectCues: 2 })
+    );
+    expect(events.at(-1)).toMatchObject({
+      type: "complete",
+      report: { cues: 3, translated: 3, removedSoundEffectCues: 2, parse },
     });
   });
 });

@@ -45,7 +45,9 @@ export function buildInstructions({
 
 // The Responses API request for one chunk of cues.
 export function buildChunkRequest(instructions: string, cuesPart: Cue[]): ResponseCreateParamsNonStreaming {
-  const payload = cuesPart.map((c) => ({ index: c.index, text: c.text }));
+  // The wire key stays "index" (unchanged prompt and schema); it carries the
+  // cue's internal id, so cues sharing an SRT number stay distinct.
+  const payload = cuesPart.map((c) => ({ index: c.id, text: c.text }));
 
   return {
     model: "gpt-5.2",

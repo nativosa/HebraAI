@@ -1,19 +1,23 @@
 // Browser-side reader for the /api/translate NDJSON stream.
 
+import type { TranslationReport } from "./report";
+
+export type TranslationResult = { content: string; report?: TranslationReport };
+
 export type StreamHandlers = {
   onProgress?: (progress: number) => void;
 };
 
-// Reads the stream to the end and returns the translated SRT. Lines that are
+// Reads the stream to the end and returns the translated SRT and its report. Lines that are
 // not valid JSON are skipped; an error event or a stream without a
 // translation throws.
-export async function readTranslationStream(res: Response, handlers: StreamHandlers = {}): Promise<string> {
+export async function readTranslationStream(res: Response, handlers: StreamHandlers = {}): Promise<TranslationResult> {
   const reader = res.body?.getReader();
   if (!reader) throw new Error("No response body");
 
   const decoder = new TextDecoder();
   let buffer = "";
-  let translatedText = "";
+  let result = null as TranslationResult | null; // assigned inside handle()
 
   // `trailing`: the unterminated last line, where progress is ignored.
   const handle = (line: string, trailing = false) => {
@@ -27,7 +31,7 @@ export async function readTranslationStream(res: Response, handlers: StreamHandl
     if (msg.type === "progress" && !trailing) {
       handlers.onProgress?.(msg.progress);
     } else if (msg.type === "complete") {
-      translatedText = msg.content;
+      result = { content: msg.content, report: msg.report };
       handlers.onProgress?.(100);
     } else if (msg.type === "error") {
       throw new Error(msg.message || "Unknown error");
@@ -54,8 +58,8 @@ export async function readTranslationStream(res: Response, handlers: StreamHandl
   // Process any remaining buffer
   if (buffer.trim()) handle(buffer.trim(), true);
 
-  if (!translatedText) {
+  if (!result?.content) {
     throw new Error("No translation received");
   }
-  return translatedText;
+  return result;
 }

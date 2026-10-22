@@ -27,7 +27,7 @@ describe("readTranslationStream", () => {
       ),
       { onProgress: (p) => progress.push(p) }
     );
-    expect(out).toBe("1\nA\n");
+    expect(out).toEqual({ content: "1\nA\n", report: undefined });
     expect(progress).toEqual([50, 100, 100]);
   });
 
@@ -35,11 +35,11 @@ describe("readTranslationStream", () => {
     const bytes = new TextEncoder().encode(line({ type: "complete", content: "שלום" }));
     const cut = bytes.indexOf(0xd7) + 1; // inside the first Hebrew letter
     const out = await readTranslationStream(streamed(bytes.slice(0, cut), bytes.slice(cut)));
-    expect(out).toBe("שלום");
+    expect(out.content).toBe("שלום");
   });
 
   it("accepts a final line without a trailing newline", async () => {
-    expect(await readTranslationStream(streamed(JSON.stringify({ type: "complete", content: "x" })))).toBe("x");
+    expect((await readTranslationStream(streamed(JSON.stringify({ type: "complete", content: "x" })))).content).toBe("x");
   });
 
   it("ignores progress in an unterminated final line", async () => {
@@ -53,7 +53,17 @@ describe("readTranslationStream", () => {
   });
 
   it("skips lines that are not JSON", async () => {
-    expect(await readTranslationStream(streamed("garbage\n", "\n", line({ type: "complete", content: "ok" })))).toBe("ok");
+    expect((await readTranslationStream(streamed("garbage\n", "\n", line({ type: "complete", content: "ok" })))).content).toBe(
+      "ok"
+    );
+  });
+
+  it("returns the report of the complete event", async () => {
+    const report = { cues: 1, translated: 1, removedSoundEffectCues: 0, parse: { recovered: [], unparsed: [] } };
+    expect(await readTranslationStream(streamed(line({ type: "complete", content: "x", report })))).toEqual({
+      content: "x",
+      report,
+    });
   });
 
   it("throws the message of an error event", async () => {

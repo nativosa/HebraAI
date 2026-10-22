@@ -4,7 +4,7 @@
 
 2
 00:00:02,500 --> 00:00:03,500
-[HE] A different second line.
+[HE] Second line.
 
 2
 00:00:04,000 --> 00:00:05,000

@@ -2,6 +2,7 @@ import type { ResponseCreateParamsNonStreaming } from "openai/resources/response
 import { buildSrt } from "@/lib/srt/build";
 import type { Cue } from "@/lib/srt/parse";
 import { buildChunkRequest } from "./prompt";
+import type { TranslationReport } from "./report";
 import { applyChunkTranslation, parseChunkOutput } from "./response";
 
 export const CHUNK_SIZE = 60;
@@ -12,8 +13,13 @@ export type CreateResponse = (params: ResponseCreateParamsNonStreaming) => Promi
 // Events streamed to the browser as NDJSON (one JSON object per line).
 export type StreamEvent =
   | { type: "progress"; progress: number; currentChunk: number; totalChunks: number }
-  | { type: "complete"; content: string }
+  | { type: "complete"; content: string; report: TranslationReport }
   | { type: "error"; message: string; details?: string };
+
+// Facts about the input that the final report carries through.
+export type TranslateContext = Pick<TranslationReport, "parse" | "removedSoundEffectCues">;
+
+const NO_CONTEXT: TranslateContext = { parse: { recovered: [], unparsed: [] }, removedSoundEffectCues: 0 };
 
 export function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -28,7 +34,8 @@ export function chunk<T>(arr: T[], size: number): T[][] {
 export async function* translateCues(
   createResponse: CreateResponse,
   cues: Cue[],
-  instructions: string
+  instructions: string,
+  context: TranslateContext = NO_CONTEXT
 ): AsyncGenerator<StreamEvent> {
   const cuesChunks = chunk(cues, CHUNK_SIZE);
   const translated: Cue[] = [];
@@ -59,10 +66,11 @@ export async function* translateCues(
     };
   }
 
-  // Sort translated cues by index to maintain order
-  translated.sort((a, b) => a.index - b.index);
+  // Keep the input order (ids are assigned in input order).
+  translated.sort((a, b) => a.id - b.id);
   yield {
     type: "complete",
     content: buildSrt(translated),
+    report: { cues: cues.length, translated: translated.length, ...context },
   };
 }

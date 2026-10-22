@@ -55,7 +55,8 @@ export async function POST(req: Request) {
 
   // --- Parse SRT ---
   const srtText = await file.text();
-  const cues = parseSrt(srtText);
+  const parsed = parseSrt(srtText);
+  const cues = parsed.cues;
 
   if (cues.length === 0) {
     return NextResponse.json(
@@ -84,7 +85,11 @@ export async function POST(req: Request) {
     async start(controller) {
       const send = (event: StreamEvent) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
       try {
-        for await (const event of translateCues((p) => client.responses.create(p), filteredCues, instructions)) {
+        const context = {
+          parse: { recovered: parsed.recovered, unparsed: parsed.unparsed },
+          removedSoundEffectCues: cues.length - filteredCues.length,
+        };
+        for await (const event of translateCues((p) => client.responses.create(p), filteredCues, instructions, context)) {
           send(event);
         }
       } catch (error) {

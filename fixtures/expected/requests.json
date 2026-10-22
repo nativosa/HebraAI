@@ -54,10 +54,10 @@
       {
         "items": 4,
         "sha256": {
-          "request": "ff6dc23ab84a35ec21fc1ccf1061fc7570d7c85def7761d392d6e66e7b9107cd",
+          "request": "b639bbfc44a720f80ac659c2753a1f0b5379ddaaf6d85634afbff175c7980530",
           "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
           "instructions": "6dbc8f4fe41256188f62a0d65a8e84a2462054386379a7edbe45045e5b4f1248",
-          "input": "d916e9118cc84e730ca1fed974553386a57183fcdf73aaba97f4b2f3fcb45975",
+          "input": "932498940548e6e5533f6f4147c7858f696fbe6a45ed1887484f4f8fb2fa99ea",
           "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
         }
       }
@@ -66,10 +66,10 @@
       {
         "items": 4,
         "sha256": {
-          "request": "ff6dc23ab84a35ec21fc1ccf1061fc7570d7c85def7761d392d6e66e7b9107cd",
+          "request": "b639bbfc44a720f80ac659c2753a1f0b5379ddaaf6d85634afbff175c7980530",
           "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
           "instructions": "6dbc8f4fe41256188f62a0d65a8e84a2462054386379a7edbe45045e5b4f1248",
-          "input": "d916e9118cc84e730ca1fed974553386a57183fcdf73aaba97f4b2f3fcb45975",
+          "input": "932498940548e6e5533f6f4147c7858f696fbe6a45ed1887484f4f8fb2fa99ea",
           "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
         }
       }
@@ -308,24 +308,24 @@
     ],
     "quirks.sfx-off": [
       {
-        "items": 3,
+        "items": 6,
         "sha256": {
-          "request": "c7e37542a26bf70650e16177c1e2b7fa54656f328ade1398a2d4dd7b5abede7c",
+          "request": "c8a754cc34b0240fae1906d4f5a021990cc9065d2e911009b3180af7c736b0b8",
           "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
           "instructions": "6dbc8f4fe41256188f62a0d65a8e84a2462054386379a7edbe45045e5b4f1248",
-          "input": "5497b0569488bf3eeaad787574025f5648af807f888b14f0f75ee002e325b165",
+          "input": "8fec5515947406bef74fc750a58688f1721d57096a12afd4b47275e63f80d0aa",
           "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
         }
       }
     ],
     "quirks.sfx-on": [
       {
-        "items": 3,
+        "items": 6,
         "sha256": {
-          "request": "c7e37542a26bf70650e16177c1e2b7fa54656f328ade1398a2d4dd7b5abede7c",
+          "request": "c8a754cc34b0240fae1906d4f5a021990cc9065d2e911009b3180af7c736b0b8",
           "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
           "instructions": "6dbc8f4fe41256188f62a0d65a8e84a2462054386379a7edbe45045e5b4f1248",
-          "input": "5497b0569488bf3eeaad787574025f5648af807f888b14f0f75ee002e325b165",
+          "input": "8fec5515947406bef74fc750a58688f1721d57096a12afd4b47275e63f80d0aa",
           "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
         }
       }
