@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { errorMessage } from "@/lib/errors";
 import { createOpenAIClient } from "@/lib/openai-client";
+import { buildSrt } from "@/lib/srt/build";
+import { parseSrt, type Cue } from "@/lib/srt/parse";
+import { removeSoundEffectCues } from "@/lib/srt/sound-effects";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
@@ -14,98 +17,11 @@ function getMaxFileSizeBytes(): number {
 
 const client = createOpenAIClient();
 
-type Cue = {
-  index: number;
-  start: string;
-  end: string;
-  text: string;
-};
-
-function parseSrt(srt: string): Cue[] {
-  // Simple parser that handles common SRT structure:
-  // index \n time --> time \n text lines... \n\n
-  const blocks = srt.replace(/\r\n/g, "\n").trim().split(/\n{2,}/);
-  const cues: Cue[] = [];
-
-  for (const block of blocks) {
-    const lines = block.split("\n");
-    if (lines.length < 3) continue;
-
-    const index = Number(lines[0].trim());
-    const timeLine = lines[1].trim();
-    const m = timeLine.match(
-      /^(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/
-    );
-    if (!m || !Number.isFinite(index)) continue;
-
-    const text = lines.slice(2).join("\n").trim();
-    cues.push({ index, start: m[1], end: m[2], text });
-  }
-
-  return cues;
-}
-
-function buildSrt(cues: Cue[]): string {
-  return cues
-    .map(
-      (c) =>
-        `${c.index}\n${c.start} --> ${c.end}\n${c.text.trim()}\n`
-    )
-    .join("\n");
-}
-
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 }
-
-// Removes simple HTML tags but preserves the inner text.
-// Example: "<i>(music)</i>" -> "(music)"
-function stripHtmlTags(input: string): string {
-  return input.replace(/<\/?[^>]+>/g, "");
-}
-
-// Removes non-dialogue annotations anywhere in the line:
-// - (...) blocks
-// - [...] blocks
-// - ♪...♪ blocks (musical cues)
-function stripNonDialogueMarkers(line: string): string {
-  let s = line;
-
-  // remove musical markers like ♪ ... ♪ (including the content)
-  s = s.replace(/♪[^♪]*♪/g, "");
-
-  // remove bracketed annotations anywhere
-  s = s.replace(/\([^)]*\)/g, ""); // (whispers)
-  s = s.replace(/\[[^\]]*\]/g, ""); // [music]
-
-  return s;
-}
-
-// Cleans a cue's text to keep only dialogue.
-// Returns cleaned text; may become empty.
-function toDialogueOnlyCueText(text: string): string {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map(stripHtmlTags)
-    .map(stripNonDialogueMarkers)
-    // normalize whitespace after removals
-    .map((l) => l.replace(/\s{2,}/g, " ").trim())
-    .filter(Boolean);
-
-  return lines.join("\n").trim();
-}
-
-// Decide if the cleaned cue still contains "dialogue-like" characters.
-// This keeps Hebrew/English letters and digits.
-// If none remain, we treat it as non-dialogue and remove the cue entirely.
-function isDialogueLike(text: string): boolean {
-  return /[A-Za-z\u0590-\u05FF0-9]/.test(text);
-}
-
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
@@ -197,13 +113,8 @@ export async function POST(req: Request) {
   let filteredCues = cues;
 
   if (removeSoundEffects) {
-  filteredCues = filteredCues
-    .map((c) => {
-      const cleaned = toDialogueOnlyCueText(c.text);
-      return { ...c, text: cleaned };
-    })
-    .filter((c) => c.text.length > 0 && isDialogueLike(c.text));
-}
+    filteredCues = removeSoundEffectCues(filteredCues);
+  }
 
   if (filteredCues.length === 0) {
     return NextResponse.json(
