@@ -12,10 +12,15 @@ export type StreamHandlers = {
   onRetry?: (retry: RetryInfo) => void;
 };
 
-// Reads the stream to the end and returns the translated SRT and its report. Lines that are
+// Reads the stream to the end and returns the translated SRT and its report.
+// Once `signal` is aborted nothing more is reported and it rejects. Lines that are
 // not valid JSON are skipped; an error event or a stream without a
 // translation throws.
-export async function readTranslationStream(res: Response, handlers: StreamHandlers = {}): Promise<TranslationResult> {
+export async function readTranslationStream(
+  res: Response,
+  handlers: StreamHandlers = {},
+  signal?: AbortSignal
+): Promise<TranslationResult> {
   const reader = res.body?.getReader();
   if (!reader) throw new Error("No response body");
 
@@ -25,6 +30,7 @@ export async function readTranslationStream(res: Response, handlers: StreamHandl
 
   // `trailing`: the unterminated last line, where progress is ignored.
   const handle = (line: string, trailing = false) => {
+    signal?.throwIfAborted();
     let msg;
     try {
       msg = JSON.parse(line);
@@ -46,6 +52,10 @@ export async function readTranslationStream(res: Response, handlers: StreamHandl
 
   while (true) {
     const { done, value } = await reader.read();
+    if (signal?.aborted) {
+      await reader.cancel().catch(() => {});
+      signal.throwIfAborted();
+    }
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
@@ -64,6 +74,7 @@ export async function readTranslationStream(res: Response, handlers: StreamHandl
   // Process any remaining buffer
   if (buffer.trim()) handle(buffer.trim(), true);
 
+  signal?.throwIfAborted();
   if (!result?.content) {
     throw new Error("No translation received");
   }

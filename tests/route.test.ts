@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import { readGolden, readExpected, readSrtFixture } from "./helpers/fixtures";
-import { itemsFor, stubModel } from "./helpers/stub-model";
+import { hangingRequest, itemsFor, stubModel } from "./helpers/stub-model";
 import { parseSrt } from "@/lib/srt/parse";
 
 // Test-only replacement of the OpenAI client module: the route's client sends
@@ -9,7 +9,9 @@ import { parseSrt } from "@/lib/srt/parse";
 const model = vi.hoisted(() => ({ current: null as ReturnType<typeof stubModel> | null }));
 vi.mock("@/lib/openai-client", () => ({
   createOpenAIClient: () => ({
-    responses: { create: (p: ResponseCreateParamsNonStreaming) => model.current!.createResponse(p) },
+    responses: {
+      create: (p: ResponseCreateParamsNonStreaming, o?: { signal?: AbortSignal }) => model.current!.createResponse(p, o ?? {}),
+    },
   }),
 }));
 
@@ -225,5 +227,36 @@ describe("POST /api/translate: incomplete translations", () => {
     const events = ndjson(await (await post({ ...UI_DEFAULTS, file: fixtureFile("basic.srt") })).text());
     const report = JSON.stringify(events.at(-1).report);
     for (const c of parseSrt(readSrtFixture("basic.srt")).cues) expect(report).not.toContain(c.text);
+  });
+});
+
+describe("POST /api/translate: cancellation", () => {
+  const until = async (cond: () => boolean) => {
+    for (let i = 0; i < 100 && !cond(); i++) await new Promise((r) => setTimeout(r, 5));
+    expect(cond()).toBe(true);
+  };
+
+  it("cancelling the response stream aborts the request in flight and sends nothing more", async () => {
+    model.current = stubModel({ 1: hangingRequest });
+    const res = await post({ ...UI_DEFAULTS, file: fixtureFile("multi-chunk.srt") });
+    const reader = res.body!.getReader();
+    await until(() => model.current!.calls.length === 1);
+    await reader.cancel();
+    await until(() => model.current!.signals[0]?.aborted === true);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(model.current.calls).toHaveLength(1);
+  });
+
+  it("the browser disconnecting (request signal) aborts the job", async () => {
+    model.current = stubModel({ 1: hangingRequest });
+    const ac = new AbortController();
+    const fd = new FormData();
+    for (const [k, v] of Object.entries({ ...UI_DEFAULTS, file: fixtureFile("multi-chunk.srt") })) fd.append(k, v);
+    const res = await POST(new Request("http://127.0.0.1/api/translate", { method: "POST", body: fd, signal: ac.signal }));
+    await until(() => model.current!.calls.length === 1);
+    ac.abort();
+    await until(() => model.current!.signals[0]?.aborted === true);
+    expect(model.current.calls).toHaveLength(1);
+    expect(res.status).toBe(200);
   });
 });

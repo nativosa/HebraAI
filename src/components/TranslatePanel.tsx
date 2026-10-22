@@ -10,9 +10,12 @@ type Props = {
   notices: string[];
   // Shown while busy, e.g. a retry after a temporary error.
   status: string | null;
+  // The last run was cancelled by the user.
+  cancelled: boolean;
   // Set when the result is partial.
   partial: PartialSummary | null;
   onTranslate: () => void;
+  onCancel: () => void;
 };
 
 export default function TranslatePanel({
@@ -22,8 +25,10 @@ export default function TranslatePanel({
   error,
   notices,
   status,
+  cancelled,
   partial,
   onTranslate,
+  onCancel,
 }: Props) {
   return (
     <div className="mt-6">
@@ -38,6 +43,16 @@ export default function TranslatePanel({
         {busy ? "Translating…" : "Translate to Hebrew"}
       </button>
 
+      {busy && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm"
+        >
+          Cancel
+        </button>
+      )}
+
       <div className="mt-3">
         <div className="h-2 w-full rounded-full bg-slate-100">
           <div
@@ -48,6 +63,8 @@ export default function TranslatePanel({
         <div className="mt-2 text-xs text-slate-500">
           {busy
             ? status ?? "Working…"
+            : cancelled
+            ? "Cancelled. Nothing was kept. A request already sent to OpenAI may still be billed."
             : partial
             ? "Partial result. Review the preview, then click Download Partial SRT."
             : progress === 100

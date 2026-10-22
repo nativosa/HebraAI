@@ -136,6 +136,57 @@ async function runScenarios(fake) {
   return failures;
 }
 
+// Cancellation through the real server and SDK. Every fake answer is delayed
+// so an OpenAI request is in flight when the browser cancels. The app must
+// abort that request (the fake server sees its connection closed before
+// answering) and send no further request.
+//   - before-response: Next sends the response headers only with the first
+//     event, so cancelling during chunk 1 aborts the fetch itself (req.signal);
+//   - mid-stream: cancelling after the first progress event cancels the
+//     response stream while chunk 2 is in flight.
+async function runCancelChecks(fake) {
+  const failures = [];
+  for (const mode of ["before-response", "mid-stream"]) {
+    fake.setResponder(() => ({ delayMs: 1500 }));
+    const before = fake.requests.length;
+    const closedBefore = fake.stats.closedEarly;
+    const expectedSent = mode === "before-response" ? 1 : 2;
+    let problem = null;
+    try {
+      const fd = new FormData();
+      fd.append("file", new File([readFileSync(join(FIXTURES, "multi-chunk.srt"))], "multi-chunk.srt"));
+      for (const [k, v] of Object.entries({ ...UI_DEFAULT_FIELDS, removeSoundEffects: "false" })) fd.append(k, v);
+      const ac = new AbortController();
+      const pending = fetch(`${appUrl(PORT)}/api/translate`, { method: "POST", body: fd, signal: ac.signal });
+      if (mode === "before-response") {
+        for (let i = 0; i < 100 && fake.requests.length === before; i++) await new Promise((r) => setTimeout(r, 50));
+        ac.abort();
+        await pending.catch(() => {});
+      } else {
+        const reader = (await pending).body.getReader();
+        await reader.read(); // first progress event (chunk 1 done, chunk 2 in flight)
+        ac.abort();
+        await reader.cancel().catch(() => {});
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+      const sent = fake.requests.length - before;
+      const closed = fake.stats.closedEarly - closedBefore;
+      if (sent !== expectedSent || closed !== 1) {
+        problem = `${sent} request(s) sent, ${closed} aborted in flight (expected ${expectedSent} and 1)`;
+      }
+    } catch (err) {
+      problem = err?.message ?? String(err);
+    } finally {
+      fake.setResponder(null);
+    }
+    console.log(
+      `${problem ? "FAIL" : "PASS"}  cancel (${mode}): job stopped, OpenAI request in flight aborted, no further requests${problem ? ` — ${problem}` : ""}`
+    );
+    if (problem) failures.push(`cancel ${mode}`);
+  }
+  return failures;
+}
+
 // Compares results with the immutable legacy references; every difference
 // must be explained in changes.json and every explanation must still apply.
 function checkAgainstLegacy(results, fingerprints, changes) {
@@ -195,7 +246,9 @@ async function main() {
     for (const { name, fields } of PROMPT_VARIANTS) {
       await recordRequests(fake, requestsByCase, `prompt.${name}`, () => postFixture(PORT, "basic.srt", fields));
     }
-    if (mode === "check") guardFailures = [...(await runGuards()), ...(await runScenarios(fake))];
+    if (mode === "check") {
+      guardFailures = [...(await runGuards()), ...(await runScenarios(fake)), ...(await runCancelChecks(fake))];
+    }
   } finally {
     stopApp(child);
     await fake.close();

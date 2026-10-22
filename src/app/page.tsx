@@ -9,6 +9,7 @@ import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
 import { describeParseReport, describePartial, type PartialSummary } from "@/lib/translation/report";
+import { RunControl } from "@/lib/translation/run-control";
 import { readTranslationStream } from "@/lib/translation/stream-client";
 import type { Settings } from "@/lib/types";
 
@@ -22,6 +23,8 @@ export default function Home() {
   const [notices, setNotices] = useState<string[]>([]);
   const [partial, setPartial] = useState<PartialSummary | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+  const runs = useRef<RunControl | null>(null);
 
   const [settings, setSettings] = useState<Settings>({
     tone: "Neutral",
@@ -63,6 +66,10 @@ export default function Home() {
   }
 
   function onFileSelected(f: File | null) {
+    runs.current?.cancel();
+    setBusy(false);
+    setCancelled(false);
+    setStatus(null);
     setError(null);
     setNotices([]);
     setPartial(null);
@@ -93,7 +100,13 @@ export default function Home() {
   async function onTranslate() {
     if (!file) return;
 
+    runs.current ??= new RunControl();
+    const { id, signal } = runs.current.start();
+    // False once this run was cancelled or replaced: its results are discarded.
+    const isCurrent = () => runs.current?.isCurrent(id) ?? false;
+
     setBusy(true);
+    setCancelled(false);
     setError(null);
     setNotices([]);
     setPartial(null);
@@ -114,6 +127,7 @@ export default function Home() {
       const res = await fetch("/api/translate", {
         method: "POST",
         body: fd,
+        signal,
       });
 
       if (!res.ok) {
@@ -122,28 +136,54 @@ export default function Home() {
       }
 
       // Handle streaming response
-      const result = await readTranslationStream(res, {
-        onProgress: (p) => {
-          setProgress(p);
-          setStatus(null);
+      const result = await readTranslationStream(
+        res,
+        {
+          onProgress: (p) => {
+            if (!isCurrent()) return;
+            setProgress(p);
+            setStatus(null);
+          },
+          onRetry: (r) => {
+            if (!isCurrent()) return;
+            setStatus(
+              `Temporary problem (${r.reason}) on chunk ${r.chunk}. Retrying in ${Math.ceil(r.delayMs / 1000)} s (retry ${r.attempt})…`
+            );
+          },
         },
-        onRetry: (r) =>
-          setStatus(
-            `Temporary problem (${r.reason}) on chunk ${r.chunk}. Retrying in ${Math.ceil(r.delayMs / 1000)} s (retry ${r.attempt})…`
-          ),
-      });
+        signal
+      );
+      if (!isCurrent()) return;
 
       setPreviewHe(result.content);
       setTranslatedSrt(result.content);
       setNotices(result.report ? describeParseReport(result.report.parse) : []);
       setPartial(result.partial && result.report ? describePartial(result.report) : null);
     } catch (err) {
+      if (!isCurrent()) return;
       setError(errorMessage(err));
       setProgress(0);
     } finally {
-      setStatus(null);
-      setBusy(false);
+      if (isCurrent()) {
+        setStatus(null);
+        setBusy(false);
+      }
     }
+  }
+
+  // Stops the server job and discards everything from this run, even a
+  // result that is already arriving.
+  function onCancel() {
+    runs.current?.cancel();
+    setBusy(false);
+    setProgress(0);
+    setStatus(null);
+    setError(null);
+    setNotices([]);
+    setPartial(null);
+    setPreviewHe("");
+    setTranslatedSrt("");
+    setCancelled(true);
   }
 
   return (
@@ -196,8 +236,10 @@ export default function Home() {
                   error={error}
                   notices={notices}
                   status={status}
+                  cancelled={cancelled}
                   partial={partial}
                   onTranslate={onTranslate}
+                  onCancel={onCancel}
                 />
               </div>
             </div>

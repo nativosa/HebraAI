@@ -106,6 +106,29 @@ describe("readTranslationStream", () => {
     );
   });
 
+  it("rejects and reports nothing once the signal is aborted", async () => {
+    const ac = new AbortController();
+    const seen: number[] = [];
+    const run = readTranslationStream(
+      streamed(line({ type: "progress", progress: 50 }), line({ type: "complete", content: "late" })),
+      {
+        onProgress: (p) => {
+          seen.push(p);
+          ac.abort(new Error("cancelled"));
+        },
+      },
+      ac.signal
+    );
+    await expect(run).rejects.toThrow("cancelled");
+    expect(seen).toEqual([50]);
+  });
+
+  it("rejects for an already aborted signal without reading results", async () => {
+    await expect(
+      readTranslationStream(streamed(line({ type: "complete", content: "x" })), {}, AbortSignal.abort(new Error("gone")))
+    ).rejects.toThrow("gone");
+  });
+
   it("throws without a body", async () => {
     await expect(readTranslationStream(new Response(null))).rejects.toThrow("No response body");
   });

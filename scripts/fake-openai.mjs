@@ -67,7 +67,9 @@ function buildReply(reply, body) {
 }
 
 export function startFakeOpenAI() {
-  const stats = { requests: 0, rejected: 0 };
+  // closedEarly: accepted requests whose connection the client closed before
+  // the answer was sent (e.g. an aborted request).
+  const stats = { requests: 0, rejected: 0, closedEarly: 0 };
   const requests = [];
   let responder = null;
 
@@ -101,6 +103,9 @@ export function startFakeOpenAI() {
       }
       stats.requests++;
       requests.push(body);
+      res.on("close", () => {
+        if (!res.writableEnded) stats.closedEarly++;
+      });
       const reply = responder ? responder(body, requests.length) : undefined;
       const { status, headers, json } = buildReply(reply, body);
       if (reply?.delayMs) setTimeout(() => send(status, json, headers), reply.delayMs);

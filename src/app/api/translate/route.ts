@@ -1,3 +1,4 @@
+import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import { NextResponse } from "next/server";
 import { errorMessage } from "@/lib/errors";
 import { createOpenAIClient } from "@/lib/openai-client";
@@ -85,24 +86,36 @@ export async function POST(req: Request) {
     );
   }
 
+  // --- Cancellation: the browser disconnecting (req.signal) or cancelling the
+  // response stream stops the job and aborts the OpenAI request in flight ---
+  const abort = new AbortController();
+  if (req.signal.aborted) abort.abort();
+  req.signal.addEventListener("abort", () => abort.abort(), { once: true });
+
   // --- Translation with streaming progress (NDJSON) ---
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (event: StreamEvent) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      const send = (event: StreamEvent) => {
+        if (!abort.signal.aborted) controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      };
       try {
         const context = {
           parse: { recovered: parsed.recovered, unparsed: parsed.unparsed },
           removedSoundEffectCues: cues.length - filteredCues.length,
         };
-        const options = { context, maxAttemptsPerChunk: getMaxAttemptsPerChunk() };
-        for await (const event of translateCues((p) => client.responses.create(p), filteredCues, instructions, options)) {
+        const options = { context, maxAttemptsPerChunk: getMaxAttemptsPerChunk(), signal: abort.signal };
+        const createResponse = (p: ResponseCreateParamsNonStreaming, o: { signal?: AbortSignal }) => client.responses.create(p, o);
+        for await (const event of translateCues(createResponse, filteredCues, instructions, options)) {
           send(event);
         }
       } catch (error) {
         send({ type: "error", message: errorMessage(error) });
       }
-      controller.close();
+      if (!abort.signal.aborted) controller.close();
+    },
+    cancel() {
+      abort.abort();
     },
   });
 

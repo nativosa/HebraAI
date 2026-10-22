@@ -14,11 +14,16 @@ export const CHUNK_SIZE = 60;
 export const DEFAULT_MAX_ATTEMPTS_PER_CHUNK = 6;
 
 // Sends one request to the model; the route passes the OpenAI client here.
-export type CreateResponse = (params: ResponseCreateParamsNonStreaming) => Promise<ModelResponse>;
+// Aborting the signal must abort the request.
+export type CreateResponse = (
+  params: ResponseCreateParamsNonStreaming,
+  options: { signal?: AbortSignal }
+) => Promise<ModelResponse>;
 
 // Events streamed to the browser as NDJSON (one JSON object per line). The
 // last event is exactly one of complete (every cue translated), partial (some
-// cues translated, the rest kept in English) or error (nothing translated).
+// cues translated, the rest kept in English) or error (nothing translated) —
+// unless the job is cancelled, which ends it without a final event.
 export type StreamEvent =
   | { type: "progress"; progress: number; currentChunk: number; totalChunks: number }
   // A request failed temporarily and will be repeated after delayMs.
@@ -33,10 +38,16 @@ export type TranslateContext = Pick<TranslationReport, "parse" | "removedSoundEf
 export type TranslateOptions = {
   context?: TranslateContext;
   maxAttemptsPerChunk?: number;
+  // Cancels the job: no further chunks, requests, retries or repairs; the
+  // request in flight is aborted.
+  signal?: AbortSignal;
   // Injected in tests for deterministic retries.
-  sleep?: (ms: number) => Promise<void>;
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   random?: () => number;
 };
+
+// Thrown inside the job once its signal is aborted.
+class Cancelled extends Error {}
 
 const NO_CONTEXT: TranslateContext = { parse: { recovered: [], unparsed: [] }, removedSoundEffectCues: 0 };
 
@@ -54,7 +65,8 @@ type Job = {
   createResponse: CreateResponse;
   instructions: string;
   maxAttempts: number;
-  sleep: (ms: number) => Promise<void>;
+  signal?: AbortSignal;
+  sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   random: () => number;
   translations: Map<number, string>;
   failed: Map<number, FailureReason>;
@@ -73,6 +85,7 @@ export async function* translateCues(
   {
     context = NO_CONTEXT,
     maxAttemptsPerChunk = DEFAULT_MAX_ATTEMPTS_PER_CHUNK,
+    signal,
     sleep = defaultSleep,
     random = Math.random,
   }: TranslateOptions = {}
@@ -83,6 +96,7 @@ export async function* translateCues(
     createResponse,
     instructions,
     maxAttempts: maxAttemptsPerChunk,
+    signal,
     sleep,
     random,
     translations: new Map(),
@@ -94,9 +108,11 @@ export async function* translateCues(
   let failure: string | undefined;
 
   for (let chunkIndex = 0; chunkIndex < cuesChunks.length; chunkIndex++) {
+    if (signal?.aborted) return;
     try {
       yield* translateChunk(job, cuesChunks[chunkIndex], chunkIndex + 1);
     } catch (error) {
+      if (error instanceof Cancelled || signal?.aborted) return;
       failure = errorMessage(error);
       for (const c of cuesChunks.slice(chunkIndex).flat()) {
         if (!job.translations.has(c.id) && !job.failed.has(c.id)) job.failed.set(c.id, "request-failed");
@@ -113,6 +129,7 @@ export async function* translateCues(
     };
   }
 
+  if (signal?.aborted) return;
   yield finalEvent(cues, job, failure, context);
 }
 
@@ -127,19 +144,26 @@ async function* translateChunk(job: Job, cues: Cue[], chunkNumber: number): Asyn
   async function* send(subset: Cue[]): AsyncGenerator<StreamEvent> {
     const params = buildChunkRequest(job.instructions, subset);
     for (let retry = 1; ; retry++) {
+      if (job.signal?.aborted) throw new Cancelled();
       budget--;
       job.requests++;
       let response: ModelResponse;
       try {
-        response = await job.createResponse(params);
+        response = await job.createResponse(params, { signal: job.signal });
       } catch (error) {
+        if (job.signal?.aborted) throw new Cancelled();
         const decision = decideRetry(error, retry, job.random);
         if (!decision.retry || retry > MAX_RETRIES_PER_REQUEST || budget < 1) throw error;
         job.retries++;
         yield { type: "retry", chunk: chunkNumber, attempt: retry, delayMs: decision.delayMs, reason: decision.reason };
-        await job.sleep(decision.delayMs);
+        try {
+          await job.sleep(decision.delayMs, job.signal);
+        } catch {
+          throw new Cancelled();
+        }
         continue;
       }
+      if (job.signal?.aborted) throw new Cancelled();
       const result = validateChunkResponse(subset, response);
       result.translations.forEach((text, id) => {
         job.translations.set(id, text);
@@ -164,7 +188,7 @@ async function* translateChunk(job: Job, cues: Cue[], chunkNumber: number): Asyn
   const wholeChunkFailed = cues.length > 1 && cues.every((c) => WHOLE_ANSWER_FAILURES.has(job.failed.get(c.id)!));
   const groups = wholeChunkFailed ? chunk(repairable, Math.ceil(repairable.length / 2)) : [repairable];
   for (const group of groups) {
-    if (budget < 1) break;
+    if (budget < 1 || job.signal?.aborted) break;
     job.repairs++;
     yield* send(group);
   }

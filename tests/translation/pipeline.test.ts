@@ -5,7 +5,7 @@ import { CHUNK_SIZE, DEFAULT_MAX_ATTEMPTS_PER_CHUNK, chunk, translateCues, type 
 import { buildChunkRequest } from "@/lib/translation/prompt";
 import { cue, cues } from "../helpers/cues";
 import { readGolden, readExpected, readSrtFixture } from "../helpers/fixtures";
-import { incompleteResponse, itemsFor, itemsSent, refusalResponse, stubModel } from "../helpers/stub-model";
+import { hangingRequest, incompleteResponse, itemsFor, itemsSent, refusalResponse, stubModel } from "../helpers/stub-model";
 
 const golden = readGolden();
 
@@ -63,7 +63,7 @@ describe("translateCues: chunk boundaries", () => {
       maxActive = Math.max(maxActive, ++active);
       await new Promise((r) => setTimeout(r, 1));
       active--;
-      return inner.createResponse(p);
+      return inner.createResponse(p, {});
     };
     await collect(translateCues(createResponse, cues(150), "instr"));
     expect(maxActive).toBe(1);
@@ -368,5 +368,80 @@ describe("translateCues: retries after temporary errors", () => {
     const { last, model } = await run({ 2: apiError(500), 3: apiError(500), 4: apiError(500), 5: apiError(500) }, 70);
     expect(model.calls).toHaveLength(5);
     expect(last).toMatchObject({ type: "partial", report: { translated: 60, failure: "500 HTTP 500", retries: 3 } });
+  });
+});
+
+describe("translateCues: cancellation", () => {
+  it("an already aborted signal sends nothing and yields nothing", async () => {
+    const model = stubModel();
+    const events = await collect(translateCues(model.createResponse, cues(3), "instr", { signal: AbortSignal.abort() }));
+    expect(events).toEqual([]);
+    expect(model.calls).toHaveLength(0);
+  });
+
+  it("passes the signal to every request", async () => {
+    const ac = new AbortController();
+    const model = stubModel({ 1: itemsFor(1) });
+    await collect(translateCues(model.createResponse, cues(2), "instr", { signal: ac.signal }));
+    expect(model.signals).toEqual([ac.signal, ac.signal]);
+  });
+
+  it("cancelling after chunk 1 stops before chunk 2, with no final event", async () => {
+    const ac = new AbortController();
+    const model = stubModel();
+    const events: StreamEvent[] = [];
+    for await (const e of translateCues(model.createResponse, cues(150), "instr", { signal: ac.signal })) {
+      events.push(e);
+      if (e.type === "progress") ac.abort();
+    }
+    expect(events.map((e) => e.type)).toEqual(["progress"]);
+    expect(model.calls).toHaveLength(1);
+  });
+
+  it("cancelling during a request aborts it: no retry, no repair, no final event", async () => {
+    const ac = new AbortController();
+    const model = stubModel({ 1: hangingRequest });
+    const run = collect(translateCues(model.createResponse, cues(3), "instr", { signal: ac.signal }));
+    await Promise.resolve();
+    ac.abort();
+    expect(await run).toEqual([]);
+    expect(model.calls).toHaveLength(1);
+  });
+
+  it("cancelling during a retry wait stops before the retry", async () => {
+    const ac = new AbortController();
+    const model = stubModel({ 1: APIError.generate(503, { error: { message: "busy" } }, undefined, new Headers()) });
+    const sleep = (_ms: number, signal?: AbortSignal) =>
+      new Promise<void>((_, reject) => {
+        ac.abort();
+        reject(signal?.reason);
+      });
+    const events = await collect(translateCues(model.createResponse, cues(3), "instr", { signal: ac.signal, sleep }));
+    expect(events.map((e) => e.type)).toEqual(["retry"]);
+    expect(model.calls).toHaveLength(1);
+  });
+
+  it("an answer that arrives after cancellation is discarded", async () => {
+    const ac = new AbortController();
+    const model = stubModel({
+      1: async () => {
+        ac.abort();
+        return { output_text: itemsFor(1, 2, 3) };
+      },
+    });
+    expect(await collect(translateCues(model.createResponse, cues(3), "instr", { signal: ac.signal }))).toEqual([]);
+  });
+
+  it("cancelling before a repair skips it", async () => {
+    const ac = new AbortController();
+    const model = stubModel({
+      1: async () => {
+        queueMicrotask(() => ac.abort());
+        return { output_text: itemsFor(1) };
+      },
+    });
+    const events = await collect(translateCues(model.createResponse, cues(3), "instr", { signal: ac.signal }));
+    expect(model.calls).toHaveLength(1);
+    expect(events.filter((e) => e.type !== "progress")).toEqual([]);
   });
 });
