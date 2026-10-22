@@ -4,6 +4,8 @@ import { createOpenAIClient } from "@/lib/openai-client";
 import { buildSrt } from "@/lib/srt/build";
 import { parseSrt, type Cue } from "@/lib/srt/parse";
 import { removeSoundEffectCues } from "@/lib/srt/sound-effects";
+import { parseTranslateOptions } from "@/lib/translation/options";
+import { buildChunkRequest, buildInstructions } from "@/lib/translation/prompt";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
@@ -51,52 +53,11 @@ export async function POST(req: Request) {
   }
 
   // --- Inputs (sanitize) ---
-  const toneRaw = (form.get("tone") as string) || "Neutral";
-  const tone = (toneRaw === "Formal" || toneRaw === "Informal" || toneRaw === "Neutral")
-    ? toneRaw
-    : "Neutral";
-
-  const removeSoundEffects = form.get("removeSoundEffects") === "true";
-  const preserveBreaks = form.get("preserveBreaks") === "true";
-
-  const maxCharsRaw = Number(form.get("maxChars"));
-  const maxChars = Number.isFinite(maxCharsRaw)
-    ? Math.min(Math.max(maxCharsRaw, 20), 80)
-    : 42;
+  const options = parseTranslateOptions(form);
+  const { removeSoundEffects } = options;
 
   // --- Build instructions (dynamic) ---
-  let instructions =
-    "Translate English subtitles to natural, fluent Hebrew suitable for on-screen captions.\n" +
-    "- Preserve meaning, intent, and tone; do not translate word-for-word if unnatural.\n";
-
-  switch (tone) {
-    case "Formal":
-      instructions += "- Use formal, polite Hebrew register suitable for professional or official contexts.\n";
-      break;
-    case "Informal":
-      instructions += "- Use informal, natural spoken Hebrew suitable for casual dialogue.\n";
-      break;
-    default:
-      instructions += "- Use neutral conversational Hebrew suitable for everyday speech.\n";
-  }
-
-  instructions +=
-    "- Translate/transliterate names, places, and brands into common Hebrew forms when appropriate.\n" +
-    "- Maintain correct gender and plurality from context.\n" +
-    "- Preserve numbers, punctuation, and symbols.\n";
-
-  // FIX: actually append the maxChars instruction
-  instructions += `- Keep each subtitle line at or below ${maxChars} characters.\n`;
-
-  if (preserveBreaks) {
-    instructions += "- Preserve original line breaks where possible; do not reflow text.\n";
-  } else {
-    instructions += "- You may reflow lines for readability while respecting the character limit.\n";
-  }
-
-  instructions +=
-    "- Do NOT add explanations, comments, or extra text.\n" +
-    "- Return ONLY valid JSON matching the requested schema.";
+  const instructions = buildInstructions(options);
 
   // --- Parse SRT ---
   const srtText = await file.text();
@@ -137,52 +98,7 @@ export async function POST(req: Request) {
       try {
         for (let chunkIndex = 0; chunkIndex < cuesChunks.length; chunkIndex++) {
           const cuesPart = cuesChunks[chunkIndex];
-          const payload = cuesPart.map((c) => ({ index: c.index, text: c.text }));
-
-          const response = await client.responses.create({
-            model: "gpt-5.2",
-            instructions,
-            input: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "input_text",
-                    text:
-                      "Translate this JSON array of subtitle items.\n" +
-                      "Return a JSON object with key 'items' which is an array of {index, text_he}.\n\n" +
-                      JSON.stringify(payload),
-                  },
-                ],
-              },
-            ],
-            text: {
-              format: {
-                type: "json_schema",
-                name: "subtitle_translation",
-                strict: true,
-                schema: {
-                  type: "object",
-                  properties: {
-                    items: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          index: { type: "number" },
-                          text_he: { type: "string" },
-                        },
-                        required: ["index", "text_he"],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ["items"],
-                  additionalProperties: false,
-                },
-              },
-            },
-          });
+          const response = await client.responses.create(buildChunkRequest(instructions, cuesPart));
 
           let json: { items: { index: number; text_he: string }[] };
           try {
