@@ -34,7 +34,9 @@ function responseFor(text) {
   };
 }
 
-function echoItems(body) {
+// Also used by the unit tests as the stub model, so they translate exactly
+// like the server that produced the legacy baseline.
+export function echoItems(body) {
   // The route sends one user message whose text ends with "\n\n<JSON array>".
   const text = body?.input?.[0]?.content?.[0]?.text ?? "";
   const json = text.slice(text.indexOf("\n\n[") + 2);

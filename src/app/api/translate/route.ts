@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { errorMessage } from "@/lib/errors";
 import { createOpenAIClient } from "@/lib/openai-client";
-import { buildSrt } from "@/lib/srt/build";
-import { parseSrt, type Cue } from "@/lib/srt/parse";
+import { parseSrt } from "@/lib/srt/parse";
 import { removeSoundEffectCues } from "@/lib/srt/sound-effects";
 import { parseTranslateOptions } from "@/lib/translation/options";
-import { buildChunkRequest, buildInstructions } from "@/lib/translation/prompt";
+import { type StreamEvent, translateCues } from "@/lib/translation/pipeline";
+import { buildInstructions } from "@/lib/translation/prompt";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
@@ -18,12 +18,6 @@ function getMaxFileSizeBytes(): number {
 }
 
 const client = createOpenAIClient();
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
@@ -84,88 +78,19 @@ export async function POST(req: Request) {
     );
   }
 
-  // --- Chunking ---
-  const cuesChunks = chunk(filteredCues, 60);
-
-  // --- Translation loop with streaming progress ---
-  const translated: Cue[] = [];
-  const totalChunks = cuesChunks.length;
-  
-  // Create a readable stream for the translation
+  // --- Translation with streaming progress (NDJSON) ---
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      const send = (event: StreamEvent) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
       try {
-        for (let chunkIndex = 0; chunkIndex < cuesChunks.length; chunkIndex++) {
-          const cuesPart = cuesChunks[chunkIndex];
-          const response = await client.responses.create(buildChunkRequest(instructions, cuesPart));
-
-          let json: { items: { index: number; text_he: string }[] };
-          try {
-            json = JSON.parse(response.output_text);
-          } catch {
-            controller.enqueue(
-              encoder.encode(
-                JSON.stringify({
-                  type: "error",
-                  message: "Model returned invalid JSON (unexpected).",
-                  details: response.output_text?.slice(0, 500),
-                }) + "\n"
-              )
-            );
-            controller.close();
-            return;
-          }
-
-          const map = new Map<number, string>(json.items.map((x) => [x.index, x.text_he]));
-
-          for (const c of cuesPart) {
-            const he = map.get(c.index);
-            translated.push({
-              ...c,
-              text: (he ?? c.text).trim(),
-            });
-          }
-          
-          // Send progress update
-          const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-          controller.enqueue(
-            encoder.encode(
-              JSON.stringify({
-                type: "progress",
-                progress,
-                currentChunk: chunkIndex + 1,
-                totalChunks,
-              }) + "\n"
-            )
-          );
+        for await (const event of translateCues((p) => client.responses.create(p), filteredCues, instructions)) {
+          send(event);
         }
-
-        // Sort translated cues by index to maintain order
-        translated.sort((a, b) => a.index - b.index);
-        const outSrt = buildSrt(translated);
-
-        // Send final SRT content
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              type: "complete",
-              content: outSrt,
-            }) + "\n"
-          )
-        );
-        controller.close();
       } catch (error) {
-        controller.enqueue(
-          encoder.encode(
-            JSON.stringify({
-              type: "error",
-              message: errorMessage(error),
-            }) + "\n"
-          )
-        );
-        controller.close();
+        send({ type: "error", message: errorMessage(error) });
       }
+      controller.close();
     },
   });
 
