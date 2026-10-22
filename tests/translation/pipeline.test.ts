@@ -156,6 +156,8 @@ describe("translateCues: validation and partial results", () => {
         repairs: 1,
         retries: 0,
         glossary: { entries: 0, ignoredLines: [] },
+        usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+        elapsedMs: expect.any(Number),
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -444,5 +446,51 @@ describe("translateCues: cancellation", () => {
     const events = await collect(translateCues(model.createResponse, cues(3), "instr", { signal: ac.signal }));
     expect(model.calls).toHaveLength(1);
     expect(events.filter((e) => e.type !== "progress")).toEqual([]);
+  });
+});
+
+describe("translateCues: usage, time and cost", () => {
+  const usage = (input: number, output: number, cached = 0, reasoning = 0) => ({
+    input_tokens: input,
+    output_tokens: output,
+    input_tokens_details: { cached_tokens: cached },
+    output_tokens_details: { reasoning_tokens: reasoning },
+  });
+  const reply = (text: string, u: ReturnType<typeof usage>) => ({ output_text: text, status: "completed", usage: u });
+
+  it("sums the usage of every answered request, incl. repairs", async () => {
+    const model = stubModel({ 1: reply(itemsFor(1), usage(100, 20, 40, 5)), 2: reply(itemsFor(2), usage(30, 10)) });
+    const last = (await collect(translateCues(model.createResponse, cues(2), "instr"))).at(-1)!;
+    expect(last).toMatchObject({
+      type: "complete",
+      report: { requests: 2, usage: { inputTokens: 130, cachedInputTokens: 40, outputTokens: 30, reasoningTokens: 5 } },
+    });
+  });
+
+  it("counts no tokens for failed requests or answers without usage", async () => {
+    const error = APIError.generate(503, { error: { message: "busy" } }, undefined, new Headers());
+    const model = stubModel({ 1: error, 2: itemsFor(1, 2) });
+    const last = (await collect(translateCues(model.createResponse, cues(2), "instr", { sleep: async () => {} }))).at(-1)!;
+    expect(last).toMatchObject({ report: { requests: 2, usage: { inputTokens: 0, outputTokens: 0 } } });
+  });
+
+  it("reports the elapsed time from the injected clock", async () => {
+    let t = 1000;
+    const now = () => (t += 250);
+    const last = (await collect(translateCues(stubModel().createResponse, cues(1), "instr", { now }))).at(-1)!;
+    expect(last).toMatchObject({ report: { elapsedMs: 250 } });
+  });
+
+  it("estimates the cost only when prices are given", async () => {
+    const model = () => stubModel({ 1: reply(itemsFor(1), usage(1_000_000, 200_000, 400_000)) });
+    const withPrices = (await collect(
+      translateCues(model().createResponse, cues(1), "instr", {
+        prices: { inputPerMTok: 2, cachedInputPerMTok: 0.5, outputPerMTok: 8 },
+      })
+    )).at(-1)!;
+    // 600k uncached * 2 + 400k cached * 0.5 + 200k output * 8 = 1.2 + 0.2 + 1.6
+    expect(withPrices).toMatchObject({ report: { estimatedCostUsd: 3 } });
+    const without = (await collect(translateCues(model().createResponse, cues(1), "instr"))).at(-1)!;
+    expect(without.type === "complete" && "estimatedCostUsd" in without.report).toBe(false);
   });
 });

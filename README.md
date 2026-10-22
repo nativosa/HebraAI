@@ -20,6 +20,7 @@ npm run dev                  # http://127.0.0.1:3000
 |---|---|---|
 | `OPENAI_API_KEY` | yes | Read only by the server route `src/app/api/translate/route.ts`. Never sent to the browser. |
 | `MAX_FILE_SIZE_BYTES` | no | Upload size limit in bytes. Default `524288` (512 KB). Larger files get HTTP 413. |
+| `OPENAI_PRICE_INPUT_PER_MTOK`, `OPENAI_PRICE_OUTPUT_PER_MTOK`, `OPENAI_PRICE_CACHED_INPUT_PER_MTOK` | no | USD per 1M tokens for the cost estimate shown after a translation (and in evaluation runs). No defaults; without input and output prices no cost is shown. An estimate, not a billing limit. |
 | `MAX_ATTEMPTS_PER_CHUNK` | no | Maximum OpenAI requests per 60-cue chunk, counting the first request, repairs and retries. Integer 1–20, default `6`. |
 
 `.env.local` is git-ignored. Never commit real keys.

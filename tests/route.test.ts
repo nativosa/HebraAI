@@ -24,6 +24,7 @@ beforeEach(() => {
   vi.stubEnv("OPENAI_API_KEY", "test-key-not-used");
   vi.stubEnv("MAX_FILE_SIZE_BYTES", undefined);
   vi.stubEnv("MAX_ATTEMPTS_PER_CHUNK", undefined);
+  for (const k of ["INPUT", "CACHED_INPUT", "OUTPUT"]) vi.stubEnv(`OPENAI_PRICE_${k}_PER_MTOK`, undefined);
   // Any real network access from the route would fail the test.
   vi.stubGlobal("fetch", () => Promise.reject(new Error("network disabled in tests")));
 });
@@ -122,6 +123,8 @@ describe("POST /api/translate: streaming", () => {
         repairs: 0,
         retries: 0,
         glossary: { entries: 0, ignoredLines: [] },
+        usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+        elapsedMs: expect.any(Number),
         removedSoundEffectCues: 0,
         parse: { recovered: [], unparsed: [] },
       },
@@ -278,5 +281,28 @@ describe("POST /api/translate: cancellation", () => {
     await until(() => model.current!.signals[0]?.aborted === true);
     expect(model.current.calls).toHaveLength(1);
     expect(res.status).toBe(200);
+  });
+});
+
+describe("POST /api/translate: usage and cost", () => {
+  it("reports usage and a cost estimate when OPENAI_PRICE_* are set", async () => {
+    vi.stubEnv("OPENAI_PRICE_INPUT_PER_MTOK", "2");
+    vi.stubEnv("OPENAI_PRICE_OUTPUT_PER_MTOK", "8");
+    model.current = stubModel({
+      1: { output_text: itemsFor(1, 2, 3, 4), status: "completed", usage: { input_tokens: 500_000, output_tokens: 125_000 } },
+    });
+    const final = ndjson(await (await post({ ...UI_DEFAULTS, file: fixtureFile("basic.srt") })).text()).at(-1);
+    expect(final.report.usage).toEqual({ inputTokens: 500000, cachedInputTokens: 0, outputTokens: 125000, reasoningTokens: 0 });
+    expect(final.report.estimatedCostUsd).toBe(2);
+  });
+
+  it.each([
+    ["no prices", {}],
+    ["only input price", { OPENAI_PRICE_INPUT_PER_MTOK: "2" }],
+    ["invalid price", { OPENAI_PRICE_INPUT_PER_MTOK: "abc", OPENAI_PRICE_OUTPUT_PER_MTOK: "8" }],
+  ])("no cost estimate with %s", async (_label, env) => {
+    for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v as string);
+    const final = ndjson(await (await post({ ...UI_DEFAULTS, file: fixtureFile("basic.srt") })).text()).at(-1);
+    expect("estimatedCostUsd" in final.report).toBe(false);
   });
 });

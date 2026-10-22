@@ -8,7 +8,13 @@ import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
-import { describeGlossary, describeParseReport, describePartial, type PartialSummary } from "@/lib/translation/report";
+import {
+  describeGlossary,
+  describeParseReport,
+  describePartial,
+  describeUsage,
+  type PartialSummary,
+} from "@/lib/translation/report";
 import { RunControl } from "@/lib/translation/run-control";
 import { readTranslationStream } from "@/lib/translation/stream-client";
 import type { Settings } from "@/lib/types";
@@ -24,6 +30,7 @@ export default function Home() {
   const [partial, setPartial] = useState<PartialSummary | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
+  const [usage, setUsage] = useState<string | null>(null);
   const runs = useRef<RunControl | null>(null);
 
   const [settings, setSettings] = useState<Settings>({
@@ -107,6 +114,7 @@ export default function Home() {
 
     setBusy(true);
     setCancelled(false);
+    setUsage(null);
     setError(null);
     setNotices([]);
     setPartial(null);
@@ -161,6 +169,7 @@ export default function Home() {
         result.report ? [...describeParseReport(result.report.parse), ...describeGlossary(result.report.glossary)] : []
       );
       setPartial(result.partial && result.report ? describePartial(result.report) : null);
+      setUsage(result.report ? describeUsage(result.report) : null);
     } catch (err) {
       if (!isCurrent()) return;
       setError(errorMessage(err));
@@ -183,6 +192,7 @@ export default function Home() {
     setError(null);
     setNotices([]);
     setPartial(null);
+    setUsage(null);
     setPreviewHe("");
     setTranslatedSrt("");
     setCancelled(true);
@@ -238,6 +248,7 @@ export default function Home() {
                   error={error}
                   notices={notices}
                   status={status}
+                  usage={usage}
                   cancelled={cancelled}
                   partial={partial}
                   onTranslate={onTranslate}

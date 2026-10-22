@@ -6,6 +6,12 @@ export type ModelResponse = {
   status?: string | null;
   incomplete_details?: { reason?: string | null } | null;
   output?: ReadonlyArray<{ type: string; content?: ReadonlyArray<{ type: string }> }>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    input_tokens_details?: { cached_tokens?: number } | null;
+    output_tokens_details?: { reasoning_tokens?: number } | null;
+  } | null;
 };
 
 // Why a cue has no translation.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseSrt } from "@/lib/srt/parse";
-import { describeGlossary, describeParseReport, describePartial } from "@/lib/translation/report";
+import { describeGlossary, describeParseReport, describePartial, describeUsage, estimateCostUsd } from "@/lib/translation/report";
 import { readSrtFixture } from "../helpers/fixtures";
 
 describe("describeParseReport", () => {
@@ -32,6 +32,8 @@ describe("describePartial", () => {
     requests: 1,
     repairs: 0,
     retries: 0,
+    usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+    elapsedMs: 0,
     removedSoundEffectCues: 0,
     glossary: { entries: 0, ignoredLines: [] },
     parse: { recovered: [], unparsed: [] },
@@ -77,5 +79,38 @@ describe("describeGlossary", () => {
       "Glossary: 2 term(s) sent with the instructions.",
       'Glossary line 3 ignored: expected "term = translation".',
     ]);
+  });
+});
+
+describe("estimateCostUsd", () => {
+  it("prices cached input separately and falls back to the input price", () => {
+    const u = { inputTokens: 2_000_000, cachedInputTokens: 1_000_000, outputTokens: 500_000, reasoningTokens: 100_000 };
+    expect(estimateCostUsd(u, { inputPerMTok: 1, cachedInputPerMTok: 0.1, outputPerMTok: 4 })).toBe(3.1);
+    expect(estimateCostUsd(u, { inputPerMTok: 1, outputPerMTok: 4 })).toBe(4);
+  });
+});
+
+describe("describeUsage", () => {
+  const base = {
+    cues: 1,
+    translated: 1,
+    untranslated: [],
+    repairs: 0,
+    retries: 0,
+    removedSoundEffectCues: 0,
+    glossary: { entries: 0, ignoredLines: [] },
+    parse: { recovered: [], unparsed: [] },
+    usage: { inputTokens: 12345, cachedInputTokens: 0, outputTokens: 678, reasoningTokens: 0 },
+    elapsedMs: 12345,
+  };
+
+  it("shows requests, tokens and time", () => {
+    expect(describeUsage({ ...base, requests: 3 })).toBe("3 requests · 12,345 input / 678 output tokens · 12.3 s");
+  });
+
+  it("adds the cost estimate when present", () => {
+    expect(describeUsage({ ...base, requests: 1, estimatedCostUsd: 0.00421 })).toBe(
+      "1 request · 12,345 input / 678 output tokens · 12.3 s · ~$0.0042 (estimate)"
+    );
   });
 });

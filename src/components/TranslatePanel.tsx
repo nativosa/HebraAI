@@ -10,6 +10,8 @@ type Props = {
   notices: string[];
   // Shown while busy, e.g. a retry after a temporary error.
   status: string | null;
+  // Requests, tokens, time and cost estimate of the last run.
+  usage: string | null;
   // The last run was cancelled by the user.
   cancelled: boolean;
   // Set when the result is partial.
@@ -25,6 +27,7 @@ export default function TranslatePanel({
   error,
   notices,
   status,
+  usage,
   cancelled,
   partial,
   onTranslate,
@@ -72,6 +75,8 @@ export default function TranslatePanel({
             : "Idle"}
         </div>
       </div>
+
+      {!busy && usage && <div className="mt-1 text-[11px] text-slate-400">{usage}</div>}
 
       {partial && (
         <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3">

@@ -1,5 +1,48 @@
 import type { ParseIssue, RecoveredKind, UnparsedBlock, UnparsedKind } from "@/lib/srt/parse";
-import type { FailureReason } from "./response";
+import type { FailureReason, ModelResponse } from "./response";
+
+type ModelUsage = NonNullable<ModelResponse["usage"]>;
+
+export type TokenUsage = {
+  inputTokens: number;
+  cachedInputTokens: number; // part of inputTokens
+  outputTokens: number;
+  reasoningTokens: number; // part of outputTokens
+};
+
+// USD per 1M tokens. Cached input falls back to the input price.
+export type TokenPrices = { inputPerMTok: number; cachedInputPerMTok?: number; outputPerMTok: number };
+
+export const NO_USAGE: TokenUsage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 };
+
+export function addUsage(total: TokenUsage, usage: ModelUsage | null | undefined): TokenUsage {
+  return {
+    inputTokens: total.inputTokens + (usage?.input_tokens ?? 0),
+    cachedInputTokens: total.cachedInputTokens + (usage?.input_tokens_details?.cached_tokens ?? 0),
+    outputTokens: total.outputTokens + (usage?.output_tokens ?? 0),
+    reasoningTokens: total.reasoningTokens + (usage?.output_tokens_details?.reasoning_tokens ?? 0),
+  };
+}
+
+export function estimateCostUsd(usage: TokenUsage, prices: TokenPrices): number {
+  const uncached = usage.inputTokens - usage.cachedInputTokens;
+  const cost =
+    uncached * prices.inputPerMTok +
+    usage.cachedInputTokens * (prices.cachedInputPerMTok ?? prices.inputPerMTok) +
+    usage.outputTokens * prices.outputPerMTok;
+  return Math.round(cost) / 1e6;
+}
+
+// One line for the UI, e.g. "3 requests · 1,234 input / 456 output tokens · 12.3 s · ~$0.0042".
+export function describeUsage(report: TranslationReport): string {
+  const n = (x: number) => x.toLocaleString("en-US");
+  return (
+    `${report.requests} request${report.requests === 1 ? "" : "s"} · ` +
+    `${n(report.usage.inputTokens)} input / ${n(report.usage.outputTokens)} output tokens · ` +
+    `${(report.elapsedMs / 1000).toFixed(1)} s` +
+    (report.estimatedCostUsd === undefined ? "" : ` · ~$${report.estimatedCostUsd.toFixed(4)} (estimate)`)
+  );
+}
 
 export type UntranslatedCue = {
   id: number;
@@ -18,6 +61,12 @@ export type TranslationReport = {
   requests: number; // API requests sent (incl. repairs and retries)
   repairs: number; // repair requests for invalid or missing translations
   retries: number; // requests repeated after temporary errors (429, 5xx, timeouts)
+  // Tokens reported by the API for the answered requests (failed requests
+  // report none, although they may still be billed).
+  usage: TokenUsage;
+  elapsedMs: number;
+  // Only when prices are configured (OPENAI_PRICE_*_PER_MTOK); an estimate.
+  estimatedCostUsd?: number;
   // Message of the request error that stopped the job, if any.
   failure?: string;
   removedSoundEffectCues: number;

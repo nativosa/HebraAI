@@ -3,7 +3,7 @@ import { errorMessage } from "@/lib/errors";
 import { buildSrt } from "@/lib/srt/build";
 import type { Cue } from "@/lib/srt/parse";
 import { buildChunkRequest } from "./prompt";
-import { FAILURE_LABELS, type TranslationReport } from "./report";
+import { FAILURE_LABELS, NO_USAGE, addUsage, estimateCostUsd, type TokenPrices, type TokenUsage, type TranslationReport } from "./report";
 import { REPAIRABLE, validateChunkResponse, type FailureReason, type ModelResponse } from "./response";
 import { MAX_RETRIES_PER_REQUEST, decideRetry, sleep as defaultSleep } from "./retry";
 
@@ -44,6 +44,10 @@ export type TranslateOptions = {
   // Injected in tests for deterministic retries.
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   random?: () => number;
+  // For the cost estimate in the report; omitted = no estimate.
+  prices?: TokenPrices;
+  // Clock for elapsedMs (injected in tests).
+  now?: () => number;
 };
 
 // Thrown inside the job once its signal is aborted.
@@ -77,6 +81,7 @@ type Job = {
   requests: number;
   repairs: number;
   retries: number;
+  usage: TokenUsage;
 };
 
 // Translates the cues chunk by chunk (sequentially), yielding a progress event
@@ -92,8 +97,11 @@ export async function* translateCues(
     signal,
     sleep = defaultSleep,
     random = Math.random,
+    prices,
+    now = Date.now,
   }: TranslateOptions = {}
 ): AsyncGenerator<StreamEvent> {
+  const startedAt = now();
   const cuesChunks = chunk(cues, CHUNK_SIZE);
   const totalChunks = cuesChunks.length;
   const job: Job = {
@@ -108,6 +116,7 @@ export async function* translateCues(
     requests: 0,
     repairs: 0,
     retries: 0,
+    usage: NO_USAGE,
   };
   let failure: string | undefined;
 
@@ -134,7 +143,7 @@ export async function* translateCues(
   }
 
   if (signal?.aborted) return;
-  yield finalEvent(cues, job, failure, context);
+  yield finalEvent(cues, job, failure, context, { elapsedMs: now() - startedAt, prices });
 }
 
 // One chunk: a request for all its cues, then (budget permitting) one repair
@@ -167,6 +176,7 @@ async function* translateChunk(job: Job, cues: Cue[], chunkNumber: number): Asyn
         }
         continue;
       }
+      job.usage = addUsage(job.usage, response.usage);
       if (job.signal?.aborted) throw new Cancelled();
       const result = validateChunkResponse(subset, response);
       result.translations.forEach((text, id) => {
@@ -198,7 +208,13 @@ async function* translateChunk(job: Job, cues: Cue[], chunkNumber: number): Asyn
   }
 }
 
-function finalEvent(cues: Cue[], job: Job, failure: string | undefined, context: TranslateContext): StreamEvent {
+function finalEvent(
+  cues: Cue[],
+  job: Job,
+  failure: string | undefined,
+  context: TranslateContext,
+  { elapsedMs, prices }: { elapsedMs: number; prices?: TokenPrices }
+): StreamEvent {
   const { translations, failed } = job;
   const report: TranslationReport = {
     cues: cues.length,
@@ -209,6 +225,9 @@ function finalEvent(cues: Cue[], job: Job, failure: string | undefined, context:
     requests: job.requests,
     repairs: job.repairs,
     retries: job.retries,
+    usage: job.usage,
+    elapsedMs,
+    ...(prices ? { estimatedCostUsd: estimateCostUsd(job.usage, prices) } : {}),
     ...(failure === undefined ? {} : { failure }),
     ...context,
   };

@@ -19,7 +19,7 @@ export const FAKE_API_KEY = "sk-offline-fake-key-not-real";
 
 // A Responses API object. `refusal` replaces the text with a refusal item;
 // `status: "incomplete"` needs `incompleteReason`.
-export function responseFor(text, { status = "completed", incompleteReason, refusal } = {}) {
+export function responseFor(text, { status = "completed", incompleteReason, refusal, inputChars = 0 } = {}) {
   const content = refusal
     ? [{ type: "refusal", refusal }]
     : [{ type: "output_text", text, annotations: [] }];
@@ -31,7 +31,15 @@ export function responseFor(text, { status = "completed", incompleteReason, refu
     incomplete_details: incompleteReason ? { reason: incompleteReason } : null,
     model: "fake-offline",
     output: [{ type: "message", id: "msg_fake", status, role: "assistant", content }],
-    usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0 },
+    // Deterministic stand-in figures (~4 characters per token), so usage
+    // reporting and cost estimates can be tested offline.
+    usage: {
+      input_tokens: inputChars ? Math.ceil(inputChars / 4) : 0,
+      input_tokens_details: { cached_tokens: 0 },
+      output_tokens: Math.ceil((text ?? "").length / 4),
+      output_tokens_details: { reasoning_tokens: 0 },
+      total_tokens: (inputChars ? Math.ceil(inputChars / 4) : 0) + Math.ceil((text ?? "").length / 4),
+    },
   };
 }
 
@@ -54,15 +62,16 @@ export function echoItems(body) {
 //   { delayMs: 500 }                                                    -> wait before replying
 // Returning undefined (or no responder) gives the default echo.
 function buildReply(reply, body) {
-  const echo = () => responseFor(JSON.stringify(echoItems(body)));
+  const inputChars = JSON.stringify(body).length;
+  const echo = () => responseFor(JSON.stringify(echoItems(body)), { inputChars });
   if (!reply) return { status: 200, headers: {}, json: echo() };
   const headers = reply.headers ?? {};
   if (reply.status && reply.status !== 200) {
     return { status: reply.status, headers, json: { error: { message: reply.error ?? "fake error", code: reply.code ?? null } } };
   }
   if (reply.response) return { status: 200, headers, json: reply.response };
-  if (reply.items) return { status: 200, headers, json: responseFor(JSON.stringify({ items: reply.items })) };
-  if ("outputText" in reply) return { status: 200, headers, json: responseFor(reply.outputText) };
+  if (reply.items) return { status: 200, headers, json: responseFor(JSON.stringify({ items: reply.items }), { inputChars }) };
+  if ("outputText" in reply) return { status: 200, headers, json: responseFor(reply.outputText, { inputChars }) };
   return { status: 200, headers, json: echo() };
 }
 

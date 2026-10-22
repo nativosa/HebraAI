@@ -7,6 +7,7 @@ import { removeSoundEffectCues } from "@/lib/srt/sound-effects";
 import { glossaryLimitError, parseTranslateOptions } from "@/lib/translation/options";
 import { DEFAULT_MAX_ATTEMPTS_PER_CHUNK, type StreamEvent, translateCues } from "@/lib/translation/pipeline";
 import { buildInstructions } from "@/lib/translation/prompt";
+import type { TokenPrices } from "@/lib/translation/report";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
@@ -22,6 +23,18 @@ function getMaxFileSizeBytes(): number {
 function getMaxAttemptsPerChunk(): number {
   const n = Number(process.env.MAX_ATTEMPTS_PER_CHUNK);
   return Number.isInteger(n) && n >= 1 && n <= 20 ? n : DEFAULT_MAX_ATTEMPTS_PER_CHUNK;
+}
+
+// Optional prices (USD per 1M tokens) for the cost estimate in the report.
+function getPrices(): TokenPrices | undefined {
+  const price = (name: string) => {
+    const n = Number(process.env[name]);
+    return process.env[name] && Number.isFinite(n) && n >= 0 ? n : undefined;
+  };
+  const inputPerMTok = price("OPENAI_PRICE_INPUT_PER_MTOK");
+  const outputPerMTok = price("OPENAI_PRICE_OUTPUT_PER_MTOK");
+  if (inputPerMTok === undefined || outputPerMTok === undefined) return undefined;
+  return { inputPerMTok, outputPerMTok, cachedInputPerMTok: price("OPENAI_PRICE_CACHED_INPUT_PER_MTOK") };
 }
 
 const client = createOpenAIClient();
@@ -111,7 +124,7 @@ export async function POST(req: Request) {
           removedSoundEffectCues: cues.length - filteredCues.length,
           glossary: { entries: glossary.entries.length, ignoredLines: glossary.ignoredLines },
         };
-        const options = { context, maxAttemptsPerChunk: getMaxAttemptsPerChunk(), signal: abort.signal };
+        const options = { context, maxAttemptsPerChunk: getMaxAttemptsPerChunk(), signal: abort.signal, prices: getPrices() };
         const createResponse = (p: ResponseCreateParamsNonStreaming, o: { signal?: AbortSignal }) => client.responses.create(p, o);
         for await (const event of translateCues(createResponse, filteredCues, instructions, options)) {
           send(event);
