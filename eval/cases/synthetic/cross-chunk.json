@@ -37,8 +37,8 @@
       { "id": "fem-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מוכנות"] },
       { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מוכנים", "מוכן", "מוכנה"] }
     ],
-    "reference": { "a": "המאמנת: אתן מוכנות?" },
-    "wrong": { "a": "המאמנת: אתם מוכנים?" },
+    "reference": { "a": "המאמן: אתן מוכנות?" },
+    "wrong": { "a": "המאמן: אתם מוכנים?" },
     "wrongFails": ["fem-pl", "no-other"]
   },
   {
@@ -86,11 +86,11 @@
   {
     "id": "cc-05",
     "category": "cross-chunk",
-    "description": "Alex is referred to as 'he' only in chunk 1; the imperative follows in chunk 2.",
+    "description": "Alex is referred to as 'him' only in chunk 1; the imperative follows in chunk 2.",
     "oracle": { "characters": [{ "name": "Alex", "gender": "male", "hebrewName": "אלכס" }] },
     "cues": [
       { "filler": 56 },
-      { "text": "He's here. Tell him to come in." },
+      { "text": "Alex is here. Tell him to come in." },
       { "text": "ALEX: You wanted to see me?" },
       { "filler": 2 },
       { "key": "a", "text": "Sit down, Alex." },
@@ -138,7 +138,7 @@
     ],
     "checks": [
       { "id": "masc-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["עייפים", "עיפים"] },
-      { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "עייפה", "עיפה", "עייפות"] }
+      { "id": "no-singular", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["עייף", "עיף", "עייפה", "עיפה"] }
     ],
     "reference": { "a": "ילד: אתם עייפים?" },
     "wrong": { "a": "ילד: אתה עייף?" },

@@ -89,9 +89,10 @@
     ],
     "checks": [
       { "id": "fem-pl", "dimension": "number", "type": "anyOf", "cue": "a", "forms": ["מדהימות", "נהדרות", "הייתן"] },
-      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מדהימים", "נהדרים", "הייתם", "מדהים", "מדהימה"] }
+      { "id": "no-other", "dimension": "number", "type": "noneOf", "cue": "a", "forms": ["מדהימים", "נהדרים", "הייתם"] }
     ],
     "reference": { "a": "גבירותיי, שתיכן הייתן מדהימות הערב." },
+    "accepted": [{ "a": "גבירותיי, שתיכן הייתן מדהימות. היה מדהים הערב." }],
     "wrong": { "a": "גבירותיי, שניכם הייתם מדהימים הערב." },
     "wrongFails": ["fem-pl", "no-other"]
   },

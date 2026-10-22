@@ -12,9 +12,9 @@
       { "key": "c", "text": "Are you hungry?" }
     ],
     "checks": [
-      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["ג'ון", "מרי", "מרים"], "ignoreGeresh": true },
-      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["ג'ון", "מרי", "מרים"], "ignoreGeresh": true },
-      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["ג'ון", "מרי", "מרים"], "ignoreGeresh": true },
+      { "id": "no-name-a", "dimension": "attribution", "type": "noneOf", "cue": "a", "forms": ["ג'ון", "מרי"], "ignoreGeresh": true },
+      { "id": "no-name-b", "dimension": "attribution", "type": "noneOf", "cue": "b", "forms": ["ג'ון", "מרי"], "ignoreGeresh": true },
+      { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["ג'ון", "מרי"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
     "reference": { "a": "אני קצת לחוץ.", "b": "אל תהיה. גם אני לחוצה.", "c": "אתה רעב?" },
@@ -38,8 +38,8 @@
       { "id": "no-name-c", "dimension": "attribution", "type": "noneOf", "cue": "c", "forms": ["שרה", "דן"], "ignoreGeresh": true },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b", "c"] }
     ],
-    "reference": { "a": "אני מורעב.", "b": "גם אני. את מוכנה להזמין?", "c": "אני מוכנה." },
-    "wrong": { "a": "אני מורעב.", "b": "גם אני. את מוכנה להזמין?", "c": "שרה: אני מוכנה." },
+    "reference": { "a": "אני מת מרעב.", "b": "גם אני. את מוכנה להזמין?", "c": "אני מוכנה." },
+    "wrong": { "a": "אני מת מרעב.", "b": "גם אני. את מוכנה להזמין?", "c": "שרה: אני מוכנה." },
     "wrongFails": ["no-name-c"]
   },
   {

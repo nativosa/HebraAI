@@ -26,10 +26,11 @@
       { "key": "b", "text": "...Because you look nervous." }
     ],
     "checks": [
-      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["מוכן", "לחוץ", "מתוח", "עצבני", "נראה"], "f": ["מוכנה", "לחוצה", "מתוחה", "עצבנית", "נראית"] } },
+      { "id": "same", "dimension": "consistency", "type": "sameGroup", "cues": ["a", "b"], "allowNeutral": true, "groups": { "m": ["מוכן", "לחוץ", "מתוח", "עצבני", "מתרגש", "אתה נראה", "נראה לחוץ", "נראה מתוח", "נראה עצבני"], "f": ["מוכנה", "לחוצה", "מתוחה", "עצבנית", "מתרגשת", "את נראית", "נראית"] } },
       { "id": "done", "dimension": "completeness", "type": "translated", "cues": ["a", "b"] }
     ],
     "reference": { "a": "את מוכנה?...", "b": "...כי את נראית לחוצה." },
+    "accepted": [{ "a": "את מוכנה?...", "b": "...כי נראה שאת מתרגשת." }],
     "wrong": { "a": "את מוכנה?...", "b": "...כי אתה נראה לחוץ." },
     "wrongFails": ["same"]
   },

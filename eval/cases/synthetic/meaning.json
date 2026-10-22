@@ -51,17 +51,18 @@
   {
     "id": "mn-04",
     "category": "meaning",
-    "description": "Idiom 'break a leg' is not translated literally.",
+    "description": "Idiom 'break a leg' in a theatre: 'בהצלחה' or the theatre slang 'שבור רגל'; not a literal 'break your leg'.",
     "cues": [
       { "text": "The curtain goes up in five minutes." },
       { "key": "a", "text": "Break a leg tonight!" }
     ],
     "checks": [
-      { "id": "not-literal", "dimension": "meaning", "type": "noneOf", "cue": "a", "forms": ["רגל", "רגליים"] },
-      { "id": "sense", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בהצלחה", "שיהיה בהצלחה", "תצליח", "תצליחי", "תצליחו"] }
+      { "id": "sense", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בהצלחה", "שיהיה בהצלחה", "תצליח", "תצליחי", "תצליחו", "שבור רגל", "שברו רגל"] },
+      { "id": "not-literal", "dimension": "meaning", "type": "noneOf", "cue": "a", "forms": ["את הרגל", "רגל שלך", "הרגל שלך", "רגליים"] }
     ],
     "reference": { "a": "בהצלחה הערב!" },
-    "wrong": { "a": "תשבור רגל הערב!" },
+    "accepted": [{ "a": "שבור רגל הערב!" }],
+    "wrong": { "a": "תשבור את הרגל הערב!" },
     "wrongFails": ["not-literal", "sense"]
   },
   {
@@ -95,5 +96,22 @@
     "accepted": [{ "a": "אל תכניס אותו, לא משנה מה." }],
     "wrong": { "a": "תכניס אותו, בכל מקרה." },
     "wrongFails": ["absolute"]
+  },
+  {
+    "id": "mn-07",
+    "category": "meaning",
+    "description": "Idiom 'break a leg' outside a theatre: only the meaning ('good luck'); no literal or theatre-slang translation.",
+    "cues": [
+      { "text": "Your driving test is tomorrow morning, right?" },
+      { "key": "a", "text": "Break a leg!" }
+    ],
+    "checks": [
+      { "id": "sense", "dimension": "meaning", "type": "anyOf", "cue": "a", "forms": ["בהצלחה", "שיהיה בהצלחה", "תצליח", "תצליחי", "תצליחו"] },
+      { "id": "not-literal", "dimension": "meaning", "type": "noneOf", "cue": "a", "forms": ["רגל", "רגליים"] }
+    ],
+    "reference": { "a": "בהצלחה!" },
+    "accepted": [{ "a": "שיהיה בהצלחה מחר!" }],
+    "wrong": { "a": "שבור רגל!" },
+    "wrongFails": ["not-literal", "sense"]
   }
 ]

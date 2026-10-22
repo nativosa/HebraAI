@@ -148,9 +148,10 @@
       { "id": "spk-masc", "dimension": "speaker-gender", "type": "anyOf", "cue": "a", "forms": ["מפחד", "פוחד", "מפוחד"] },
       { "id": "spk-no-fem", "dimension": "speaker-gender", "type": "noneOf", "cue": "a", "forms": ["מפחדת", "פוחדת", "מפוחדת"] },
       { "id": "adr-fem", "dimension": "addressee-gender", "type": "anyOf", "cue": "a", "forms": ["יכולה", "תוכלי", "תישארי"] },
-      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["יכול", "תוכל", "תישאר"] }
+      { "id": "adr-no-masc", "dimension": "addressee-gender", "type": "noneOf", "cue": "a", "forms": ["אתה יכול", "תוכל להישאר", "אתה מוכן להישאר"] }
     ],
     "reference": { "a": "ליאו: דודה ריטה, אני מפחד. את יכולה להישאר?" },
+    "accepted": [{ "a": "ליאו: דודה ריטה, אני מפחד. תוכלי להישאר?" }],
     "wrong": { "a": "ליאו: דודה ריטה, אני מפחדת. אתה יכול להישאר?" },
     "wrongFails": ["spk-masc", "spk-no-fem", "adr-fem", "adr-no-masc"]
   }
