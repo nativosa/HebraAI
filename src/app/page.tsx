@@ -7,6 +7,7 @@ import TranslatePanel from "@/components/TranslatePanel";
 import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
+import { errorMessage } from "@/lib/errors";
 import type { Settings } from "@/lib/types";
 
 export default function Home() {
@@ -138,7 +139,7 @@ export default function Home() {
             } else if (msg.type === "error") {
               throw new Error(msg.message || "Unknown error");
             }
-          } catch (e: any) {
+          } catch (e) {
             if (e instanceof SyntaxError) {
               // JSON parse error, skip this line
               continue;
@@ -161,7 +162,7 @@ export default function Home() {
           } else if (msg.type === "error") {
             throw new Error(msg.message || "Unknown error");
           }
-        } catch (e: any) {
+        } catch (e) {
           if (!(e instanceof SyntaxError)) throw e;
         }
       }
@@ -172,8 +173,8 @@ export default function Home() {
 
       setPreviewHe(translatedText);
       setTranslatedSrt(translatedText);
-    } catch (err: any) {
-      setError(err?.message ?? String(err));
+    } catch (err) {
+      setError(errorMessage(err));
       setProgress(0);
     } finally {
       setBusy(false);
@@ -234,8 +235,7 @@ export default function Home() {
             </div>
 
             <div className="mt-4 text-xs text-slate-500">
-              Tip: if you plan to share this tool publicly, add a simple
-              password gate to protect your API key.
+              Runs on localhost; your OpenAI key stays on the server.
             </div>
           </section>
 

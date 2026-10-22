@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { errorMessage } from "@/lib/errors";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
@@ -57,33 +58,6 @@ function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
-}
-
-function isSoundEffectCue(text: string): boolean {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  if (lines.length === 0) return false;
-
-  // Remove the cue ONLY if every non-empty line
-  // is entirely wrapped in parentheses or brackets
-  return lines.every(isSoundEffectLineSingle);
-}
-
-
-function isSoundEffectLineSingle(line: string): boolean {
-  // Entire line is (...) → sound effect (includes names, voices, SFX)
-  if (/^\([^)]*\)$/.test(line)) return true;
-
-  // Entire line is [...] → sound effect
-  if (/^\[[^\]]+\]$/.test(line)) return true;
-
-  // Musical cues
-  if (/^♪.*♪$/.test(line)) return true;
-
-  return false;
 }
 
 // Removes simple HTML tags but preserves the inner text.
@@ -302,7 +276,7 @@ export async function POST(req: Request) {
           let json: { items: { index: number; text_he: string }[] };
           try {
             json = JSON.parse(response.output_text);
-          } catch (e) {
+          } catch {
             controller.enqueue(
               encoder.encode(
                 JSON.stringify({
@@ -354,12 +328,12 @@ export async function POST(req: Request) {
           )
         );
         controller.close();
-      } catch (error: any) {
+      } catch (error) {
         controller.enqueue(
           encoder.encode(
             JSON.stringify({
               type: "error",
-              message: error?.message ?? String(error),
+              message: errorMessage(error),
             }) + "\n"
           )
         );
