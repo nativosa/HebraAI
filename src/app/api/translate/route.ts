@@ -1,6 +1,6 @@
-import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { errorMessage } from "@/lib/errors";
+import { createOpenAIClient } from "@/lib/openai-client";
 
 
 export const runtime = "nodejs"; // ensure Node runtime (not Edge) for SDK compatibility
@@ -12,7 +12,7 @@ function getMaxFileSizeBytes(): number {
   return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAX_FILE_SIZE_BYTES;
 }
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = createOpenAIClient();
 
 type Cue = {
   index: number;

@@ -7,7 +7,8 @@
 // How it works:
 //   1. Starts a local fake Responses API (scripts/fake-openai.mjs).
 //   2. Runs `next build` then `next start` on 127.0.0.1:${BASELINE_PORT:-3123}
-//      with OPENAI_BASE_URL pointing at the fake and a fake API key (process env
+//      in explicit offline test mode (HEBRAAI_OFFLINE_TEST_MODE=1), with
+//      OPENAI_BASE_URL pointing at the fake and a fake API key (process env
 //      overrides .env.local, so the real key is never loaded into this server).
 //      A production build is used so the harness does not conflict with a
 //      running `next dev` (which holds the .next/dev lock).
@@ -49,6 +50,9 @@ function startNext(baseURL) {
   const nextBin = join(ROOT, "node_modules", "next", "dist", "bin", "next");
   const env = {
     ...process.env,
+    // Explicit offline test mode: the only way the route accepts a custom
+    // endpoint (loopback + fake key only; see src/lib/openai-client.ts).
+    HEBRAAI_OFFLINE_TEST_MODE: "1",
     OPENAI_API_KEY: FAKE_API_KEY,
     OPENAI_BASE_URL: baseURL,
     NEXT_TELEMETRY_DISABLED: "1",

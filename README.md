@@ -32,6 +32,7 @@ npm run dev                  # http://127.0.0.1:3000
 | `npm run lint` | ESLint |
 | `npm run baseline:check` | Offline regression check: no OpenAI calls (see below) |
 | `npm run baseline:capture -- --overwrite` | Explicitly regenerate the legacy baseline |
+| `npm run check:openai-endpoint` | Offline check that only the official OpenAI endpoint can be used outside test mode |
 | `npm run srt:inspect <file>` | Print the structure of an SRT file (cue count, indices, BOM/EOL, hash) |
 | `npm run srt:compare <a> <b>` | Compare two SRT files' cue numbering and timestamps (ignores text) |
 
@@ -50,6 +51,12 @@ files and real outputs in `fixtures/private/`, which is git-ignored.
 ## Security notes
 
 - The OpenAI key is used only server-side.
+- The server always calls the official endpoint (`https://api.openai.com/v1`);
+  an inherited `OPENAI_BASE_URL` is ignored. Only the offline harness can
+  change it, via `HEBRAAI_OFFLINE_TEST_MODE=1`, which accepts nothing but a
+  loopback `http://127.0.0.1` / `http://[::1]` URL together with the fake test
+  key; any other combination makes the translate route fail closed without
+  sending a request (`npm run check:openai-endpoint`).
 - `dev` and `start` bind to `127.0.0.1`, so the app is not reachable from other
   machines on your network.
 - **Localhost binding is not authentication.** If you ever deploy this app or
