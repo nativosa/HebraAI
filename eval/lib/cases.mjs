@@ -10,6 +10,8 @@
 //   "cues": [ { "text": "...", "key": "t1", "gapBefore": 30 }, { "filler": 20 } ],
 //   "checks": [ ... see checks.mjs ... ],
 //   "reference": { "t1": "correct Hebrew" },   // passes every check
+//   "accepted": [ { "t1": "another valid Hebrew" } ],  // optional; each passes every check
+//                                               // (alternatives and neutral phrasings)
 //   "wrong": { "t1": "incorrect Hebrew" },      // fails exactly `wrongFails`
 //   "wrongFails": ["check-id", ...]
 // }
@@ -18,6 +20,7 @@
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { PREFIX_OPTIONS } from "./hebrew.mjs";
 
 export const CATEGORIES = [
   "speaker-gender",
@@ -43,20 +46,21 @@ export const DIMENSIONS = [
   "completeness",
 ];
 
-export const CHECK_TYPES = ["anyOf", "noneOf", "sameGroup", "preserve", "translated"];
+export const CHECK_TYPES = ["anyOf", "noneOf", "sameGroup", "preserve", "anyText", "translated"];
 const SETTINGS = ["tone", "preserveBreaks", "maxChars", "removeSoundEffects"];
 const INPUTS = ["glossary"];
 const ORACLE_CHARACTER_FIELDS = ["name", "gender", "aliases", "hebrewName"];
 const GENDERS = ["male", "female", "unknown"];
 
-// Neutral English lines used to pad scenes (no people, no gender).
+// Neutral English lines used to pad scenes: statements only — no people, no
+// "you", no imperatives (Hebrew imperatives are gendered).
 export const FILLER_LINES = [
   "The rain has stopped.",
-  "Look at the sky.",
+  "The sky is clear tonight.",
   "The train is late again.",
   "It's getting dark outside.",
   "The coffee is cold.",
-  "Listen to that wind.",
+  "The wind is getting stronger.",
   "The streets are empty tonight.",
   "That clock is always wrong.",
   "The shop opens at nine.",
@@ -132,6 +136,9 @@ export function validateCases(cases) {
       if (!CHECK_TYPES.includes(check.type)) p(`check ${check.id}: unknown type ${check.type}`);
       if (!DIMENSIONS.includes(check.dimension)) p(`check ${check.id}: unknown dimension ${check.dimension}`);
       for (const key of checkKeys(check)) if (!keys.has(key)) p(`check ${check.id}: unknown cue key ${key}`);
+      if (check.prefixes !== undefined && !PREFIX_OPTIONS.includes(check.prefixes)) p(`check ${check.id}: unknown prefixes ${check.prefixes}`);
+      if (check.neutral !== undefined && check.type !== "anyOf") p(`check ${check.id}: neutral is only allowed on anyOf`);
+      if (["preserve", "anyText"].includes(check.type) && !(Array.isArray(check.values) && check.values.length)) p(`check ${check.id}: values required`);
       for (const form of checkForms(check)) {
         try {
           new RegExp(form, "u");
@@ -142,6 +149,9 @@ export function validateCases(cases) {
     }
     for (const key of Object.keys(c.reference ?? {})) if (!keys.has(key)) p(`reference for unknown key ${key}`);
     for (const key of Object.keys(c.wrong ?? {})) if (!keys.has(key)) p(`wrong for unknown key ${key}`);
+    for (const accepted of c.accepted ?? []) {
+      for (const key of Object.keys(accepted)) if (!keys.has(key)) p(`accepted output for unknown key ${key}`);
+    }
     if (!c.reference) p("no reference");
     if (!c.wrong || !Array.isArray(c.wrongFails) || c.wrongFails.length === 0) p("no wrong output / wrongFails");
     for (const id of c.wrongFails ?? []) if (!checkIds.has(id)) p(`wrongFails: unknown check ${id}`);
@@ -154,9 +164,8 @@ export function checkKeys(check) {
 }
 
 function checkForms(check) {
-  if (check.forms) return check.forms;
   if (check.groups) return Object.values(check.groups).flat();
-  return [];
+  return [...(check.forms ?? []), ...(check.neutral ?? [])];
 }
 
 // Expands fillers into numbered cues with timings; keeps the original case.

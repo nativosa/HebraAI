@@ -40,9 +40,9 @@ export function runMarkdown(report) {
     "|---|---|---|",
     ...Object.entries(s.byCategory).map(([k, v]) => `| ${k} | ${v.passed}/${v.total} | ${pct(v.rate)} |`),
     "",
-    "| Dimension | Passed | Rate |",
-    "|---|---|---|",
-    ...Object.entries(s.byDimension).map(([k, v]) => `| ${k} | ${v.passed}/${v.total} | ${pct(v.rate)} |`),
+    "| Dimension | Passed | Rate | Neutral phrasing |",
+    "|---|---|---|---|",
+    ...Object.entries(s.byDimension).map(([k, v]) => `| ${k} | ${v.passed}/${v.total} | ${pct(v.rate)} | ${v.neutral ?? 0} |`),
     "",
     `Requests ${s.metrics.requests} · input tokens ${s.metrics.inputTokens} · output tokens ${s.metrics.outputTokens} · ` +
       `time ${(s.metrics.elapsedMs / 1000).toFixed(1)} s` +

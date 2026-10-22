@@ -34,13 +34,33 @@ export function normalizeHebrew(text) {
     .trim();
 }
 
+// Allowed prefixes per check: "all" (default: up to four of ו ה ב כ ל מ ש),
+// "ו" (only an optional "and" — for short verbs and imperatives, so חכה does
+// not match מחכה) or "none".
+const PREFIXES = { all: PREFIX, ו: "ו?", none: "" };
+
+// Removes geresh/gershayim and quotes, so ג'ון and גון match each other
+// (used for names, where they are punctuation-only spelling differences).
+const withoutGeresh = (s) => s.replace(/['"]/g, "");
+
 // True when `form` (a word or short phrase; may use simple regex syntax
 // such as "עי?יפה" or "(את|אתה)") occurs as whole words in `text`, optionally
-// after up to four prefix letters.
-export function containsForm(text, form) {
-  const pattern = new RegExp(`(?<!${LETTER})${PREFIX}(?:${normalizeHebrew(form)})(?!${LETTER})`, "u");
-  return pattern.test(normalizeHebrew(text));
+// after prefix letters.
+export function containsForm(text, form, { prefixes = "all", ignoreGeresh = false } = {}) {
+  const prepare = (s) => (ignoreGeresh ? withoutGeresh(normalizeHebrew(s)) : normalizeHebrew(s));
+  const prefix = PREFIXES[prefixes];
+  if (prefix === undefined) throw new Error(`unknown prefixes option ${prefixes}`);
+  const pattern = new RegExp(`(?<!${LETTER})${prefix}(?:${prepare(form)})(?!${LETTER})`, "u");
+  return pattern.test(prepare(text));
 }
+
+// True when `value` occurs anywhere in `text` after normalisation (no word
+// boundaries) — for symbols and numbers such as "$" or "7:30".
+export function containsText(text, value) {
+  return normalizeHebrew(text).includes(normalizeHebrew(value));
+}
+
+export const PREFIX_OPTIONS = Object.keys(PREFIXES);
 
 // True when the text contains at least one Hebrew letter.
 export function hasHebrew(text) {

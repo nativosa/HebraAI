@@ -147,7 +147,7 @@ describe("scoring and reports", () => {
       cases: { passed: 1, total: 2, rate: 0.5 },
       checks: { passed: 1, total: 2, rate: 0.5 },
       byCategory: { "speaker-gender": { passed: 1, total: 2, rate: 0.5 } },
-      byDimension: { "speaker-gender": { passed: 1, total: 2, rate: 0.5 } },
+      byDimension: { "speaker-gender": { passed: 1, total: 2, rate: 0.5, neutral: 0 } },
       statuses: { complete: 1, partial: 1 },
       metrics: { requests: 3, inputTokens: 30, outputTokens: 5, elapsedMs: 150, estimatedCostUsd: 0.001 },
     });
@@ -178,10 +178,56 @@ describe("runCheck: sameGroup with allowNeutral", () => {
   });
 
   it("passes when every cue is neutral", () => {
-    expect(runCheck(check, { a: "אין לי כוח", b: "די", c: "נמאס" })).toEqual({ pass: true, group: "neutral" });
+    expect(runCheck(check, { a: "אין לי כוח", b: "די", c: "נמאס" })).toEqual({ pass: true, group: "neutral", neutral: true });
   });
 
   it("still fails on missing cues", () => {
     expect(runCheck(check, { a: "אין לי כוח" })).toEqual({ pass: false, reason: "missing" });
+  });
+});
+
+describe("runCheck: neutral alternatives, prefixes, geresh, anyText", () => {
+  const out = { a: "נראה לי שכדאי ללכת", b: "אני חושבת שכדאי", c: "אני מחכה כאן", d: "חכה כאן", e: "ג׳ון בא", f: "הוא עולה 250$", g: "נפגש בשבע וחצי" };
+
+  it("anyOf passes through a neutral phrasing and reports it", () => {
+    const check = { type: "anyOf", cue: "a", forms: ["חושב"], neutral: ["נראה לי"] };
+    expect(runCheck(check, out)).toEqual({ pass: true, neutral: true });
+  });
+
+  it("a neutral alternative never hides a wrong-gender form (separate noneOf)", () => {
+    expect(runCheck({ type: "anyOf", cue: "b", forms: ["חושב"], neutral: ["נראה לי"] }, out)).toEqual({ pass: false, reason: "no accepted form" });
+    expect(runCheck({ type: "noneOf", cue: "b", forms: ["חושבת"] }, out)).toEqual({ pass: false, reason: "forbidden form" });
+  });
+
+  it("prefixes: 'ו' keeps short forms from matching inside other words", () => {
+    expect(runCheck({ type: "noneOf", cue: "c", forms: ["חכה"] }, out)).toEqual({ pass: false, reason: "forbidden form" });
+    expect(runCheck({ type: "noneOf", cue: "c", forms: ["חכה"], prefixes: "ו" }, out)).toEqual({ pass: true });
+    expect(runCheck({ type: "noneOf", cue: "d", forms: ["חכה"], prefixes: "ו" }, out)).toEqual({ pass: false, reason: "forbidden form" });
+    expect(runCheck({ type: "anyOf", cue: "d", forms: ["חכה"], prefixes: "none" }, { d: "וחכה" })).toEqual({ pass: false, reason: "no accepted form" });
+  });
+
+  it("ignoreGeresh treats punctuation-only spelling differences as equal", () => {
+    expect(runCheck({ type: "anyOf", cue: "e", forms: ["גון"] }, out)).toEqual({ pass: false, reason: "no accepted form" });
+    expect(runCheck({ type: "anyOf", cue: "e", forms: ["גון"], ignoreGeresh: true }, out)).toEqual({ pass: true });
+    const groups = { a: ["קתרין"], b: ["קאתרין"] };
+    expect(runCheck({ type: "sameGroup", cues: ["x", "y"], groups, ignoreGeresh: true }, { x: "קתרין", y: "קת'רין" })).toMatchObject({ pass: true });
+    expect(runCheck({ type: "sameGroup", cues: ["x", "y"], groups, ignoreGeresh: true }, { x: "קתרין", y: "קאתרין" })).toEqual({ pass: false, reason: "inconsistent groups" });
+  });
+
+  it("anyText matches symbols next to digits and spelled-out values", () => {
+    expect(runCheck({ type: "anyText", cue: "f", values: ["דולר", "$"] }, out)).toEqual({ pass: true });
+    expect(runCheck({ type: "anyText", cue: "g", values: ["7:30", "שבע וחצי"] }, out)).toEqual({ pass: true });
+    expect(runCheck({ type: "anyText", cue: "g", values: ["8:30"] }, out)).toEqual({ pass: false, reason: "value lost" });
+  });
+});
+
+describe("validateCases: new options", () => {
+  it.each([
+    ["unknown prefixes", { checks: [{ id: "fem", dimension: "speaker-gender", type: "anyOf", cue: "a", forms: ["עייפה"], prefixes: "some" }] }, "unknown prefixes"],
+    ["neutral on noneOf", { checks: [{ id: "fem", dimension: "speaker-gender", type: "noneOf", cue: "a", forms: ["עייף"], neutral: ["x"] }] }, "neutral is only allowed on anyOf"],
+    ["anyText without values", { checks: [{ id: "fem", dimension: "meaning", type: "anyText", cue: "a" }] }, "values required"],
+    ["accepted for unknown key", { accepted: [{ zz: "x" }] }, "accepted output for unknown key zz"],
+  ])("rejects %s", (_label, patch, message) => {
+    expect(validateCases([{ ...base, ...patch }]).join("\n")).toContain(message);
   });
 });

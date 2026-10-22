@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, loadCases } from "../../eval/lib/cases.mjs";
-import { HEBREW_LETTERS } from "../../eval/lib/hebrew.mjs";
+import { HEBREW_LETTERS, containsForm } from "../../eval/lib/hebrew.mjs";
 import { buildRequest } from "../../eval/lib/request.mjs";
 import { scoreCase } from "../../eval/lib/score.mjs";
 
@@ -40,6 +40,33 @@ describe("synthetic evaluation dataset", () => {
   it.each(cases.map((c) => [c.id, c] as const))("%s: reference passes, wrong fails exactly wrongFails", (_id, c) => {
     expect(failing(c, c.reference)).toEqual([]);
     expect(failing(c, c.wrong)).toEqual([...c.wrongFails].sort());
+  });
+
+  it.each(cases.filter((c) => c.accepted).map((c) => [c.id, c] as const))("%s: every accepted alternative passes", (_id, c) => {
+    for (const outputs of c.accepted) expect(failing(c, outputs)).toEqual([]);
+  });
+
+  it("every neutral alternative is exercised by an accepted output", () => {
+    for (const c of cases) {
+      for (const check of c.checks.filter((k: { neutral?: string[] }) => k.neutral)) {
+        const viaNeutral = (c.accepted ?? []).some((outputs: Record<string, string>) =>
+          scoreCase(c, { status: "complete", outputs }).checks.some((r: { id: string; neutral?: boolean }) => r.id === check.id && r.neutral)
+        );
+        expect(viaNeutral, `${c.id} ${check.id}`).toBe(true);
+      }
+    }
+  });
+
+  it("neutral alternatives contain no form forbidden for the same cue", () => {
+    for (const c of cases) {
+      for (const any of c.checks.filter((k: { neutral?: string[] }) => k.neutral)) {
+        for (const none of c.checks.filter((k: { type: string; cue?: string }) => k.type === "noneOf" && k.cue === any.cue)) {
+          for (const n of any.neutral) {
+            for (const f of none.forms) expect(containsForm(n, f, { prefixes: none.prefixes ?? "all" }), `${c.id}: ${n} / ${f}`).toBe(false);
+          }
+        }
+      }
+    }
   });
 
   it("classic and context requests carry no Hebrew except the user's glossary", () => {

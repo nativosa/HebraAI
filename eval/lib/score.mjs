@@ -9,7 +9,13 @@ export function scoreCase(c, result) {
   const untranslated = new Set(result.untranslated ?? []);
   const checks = c.checks.map((check) => {
     const r = runCheck(check, result.outputs ?? {}, untranslated);
-    return { id: check.id, dimension: check.dimension, pass: r.pass, ...(r.reason ? { reason: r.reason } : {}) };
+    return {
+      id: check.id,
+      dimension: check.dimension,
+      pass: r.pass,
+      ...(r.neutral ? { neutral: true } : {}),
+      ...(r.reason ? { reason: r.reason } : {}),
+    };
   });
   return {
     caseId: c.id,
@@ -47,8 +53,12 @@ export function summarize(scores) {
     Object.entries(group(scores, (s) => s.category)).map(([k, v]) => [k, rate(v.filter((s) => s.pass).length, v.length)])
   );
   const checks = scores.flatMap((s) => s.checks);
+  // `neutral`: checks passed through gender-neutral phrasing (gender not expressed).
   const byDimension = Object.fromEntries(
-    Object.entries(group(checks, (c) => c.dimension)).map(([k, v]) => [k, rate(v.filter((c) => c.pass).length, v.length)])
+    Object.entries(group(checks, (c) => c.dimension)).map(([k, v]) => [
+      k,
+      { ...rate(v.filter((c) => c.pass).length, v.length), neutral: v.filter((c) => c.neutral).length },
+    ])
   );
   return {
     cases: rate(scores.filter((s) => s.pass).length, scores.length),
