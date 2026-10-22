@@ -37,6 +37,7 @@ export const DIMENSIONS = [
   "addressee-gender",
   "number",
   "consistency",
+  "attribution", // no invented speaker identity (names/labels) on unlabeled lines
   "names",
   "meaning",
   "completeness",

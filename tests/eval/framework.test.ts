@@ -167,3 +167,21 @@ describe("scoring and reports", () => {
     for (const text of ["אני עייפה", "I'm tired", "Dana, you look"]) expect(all).not.toContain(text);
   });
 });
+
+describe("runCheck: sameGroup with allowNeutral", () => {
+  const groups = { m: ["עייף"], f: ["עייפה"] };
+  const check = { type: "sameGroup", cues: ["a", "b", "c"], groups, allowNeutral: true };
+
+  it("accepts neutral cues and requires the gendered ones to agree", () => {
+    expect(runCheck(check, { a: "אני עייפה", b: "אין לי כוח", c: "ועדיין עייפה" })).toEqual({ pass: true, group: "f" });
+    expect(runCheck(check, { a: "אני עייפה", b: "אין לי כוח", c: "אני עייף" })).toEqual({ pass: false, reason: "inconsistent groups" });
+  });
+
+  it("passes when every cue is neutral", () => {
+    expect(runCheck(check, { a: "אין לי כוח", b: "די", c: "נמאס" })).toEqual({ pass: true, group: "neutral" });
+  });
+
+  it("still fails on missing cues", () => {
+    expect(runCheck(check, { a: "אין לי כוח" })).toEqual({ pass: false, reason: "missing" });
+  });
+});

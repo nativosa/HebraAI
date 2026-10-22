@@ -2,9 +2,11 @@
 //
 //   { id, dimension, type: "anyOf",  cue, forms: [...] }  at least one form occurs
 //   { id, dimension, type: "noneOf", cue, forms: [...] }  no form occurs (e.g. wrong gender)
-//   { id, dimension, type: "sameGroup", cues: [...], groups: { name: [forms] } }
+//   { id, dimension, type: "sameGroup", cues: [...], groups: { name: [forms] }, allowNeutral? }
 //        every cue uses forms of one group, and the same group in all cues
-//        (consistency; either group may be right)
+//        (consistency; either group may be right). With allowNeutral, a cue
+//        using no group form (gender-neutral phrasing) is accepted and only
+//        the gendered cues must agree.
 //   { id, dimension, type: "preserve", cue, values: [...] }  literal values kept (numbers, times, names)
 //   { id, dimension, type: "translated", cues: [...] }      translated (not partial / missing)
 //
@@ -35,9 +37,13 @@ export function runCheck(check, outputs, untranslated = new Set()) {
         const groups = Object.entries(check.groups)
           .filter(([, forms]) => forms.some((f) => containsForm(text(key), f)))
           .map(([name]) => name);
-        if (groups.length === 0) return { pass: false, reason: "no group form" };
+        if (groups.length === 0) {
+          if (check.allowNeutral) continue;
+          return { pass: false, reason: "no group form" };
+        }
         common = common === null ? groups : common.filter((g) => groups.includes(g));
       }
+      if (common === null) return { pass: true, group: "neutral" };
       return common.length ? { pass: true, group: common.join("|") } : { pass: false, reason: "inconsistent groups" };
     }
     case "preserve": {
