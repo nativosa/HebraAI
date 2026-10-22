@@ -10,6 +10,10 @@ by dedicated correctness tests.
 Outputs use the offline fake translator, which prefixes every translated cue
 with `[HE] `. A cue without the prefix would be a silent English fallback.
 
+Each defect is also pinned by a unit test named `LEGACY D#` under `tests/`
+(search for the id). Those tests assert today's behaviour; when a fix lands,
+invert them rather than deleting them.
+
 | # | Fixture | Legacy behaviour (preserved) | Expected correct behaviour | Stage |
 |---|---|---|---|---|
 | D1 | `duplicate-index.srt` | Two cues numbered `2` collide: both get the translation of the second one ("A different second line."). | Each cue keeps its own translation; cues are keyed by an internal sequential id. | 2 |

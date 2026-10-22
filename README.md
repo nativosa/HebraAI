@@ -30,18 +30,49 @@ npm run dev                  # http://127.0.0.1:3000
 | `npm run dev` | Development server on `127.0.0.1:3000` |
 | `npm run build` / `npm start` | Production build / server on `127.0.0.1:3000` |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
+| `npm test` | Vitest unit and route tests (offline, see below) |
 | `npm run baseline:check` | Offline regression check: no OpenAI calls (see below) |
-| `npm run baseline:capture -- --overwrite` | Explicitly regenerate the legacy baseline |
+| `npm run baseline:capture -- --overwrite` | Explicitly regenerate the legacy baseline and request fingerprints |
+| `npm run golden:capture -- --overwrite` | Explicitly regenerate the unit tests' golden values from the running app |
 | `npm run check:openai-endpoint` | Offline check that only the official OpenAI endpoint can be used outside test mode |
 | `npm run srt:inspect <file>` | Print the structure of an SRT file (cue count, indices, BOM/EOL, hash) |
 | `npm run srt:compare <a> <b>` | Compare two SRT files' cue numbering and timestamps (ignores text) |
+
+## Code layout
+
+| Path | Responsibility |
+|---|---|
+| `src/app/api/translate/route.ts` | HTTP only: key check, upload guards, error responses, NDJSON stream |
+| `src/lib/srt/` | Pure SRT handling: `parse`, `build`, `sound-effects` filtering |
+| `src/lib/translation/options.ts` | Reads and sanitizes the form options |
+| `src/lib/translation/prompt.ts` | Instructions and the Responses API request for one chunk |
+| `src/lib/translation/response.ts` | Parses model output and applies it to cues (English fallback) |
+| `src/lib/translation/pipeline.ts` | Chunks of 60 cues, sequential requests, progress / complete / error events; the model call is passed in |
+| `src/lib/openai-client.ts` | OpenAI client pinned to the official endpoint |
+
+## Tests (free, offline)
+
+`npm test` runs Vitest. No test touches the network: the pipeline and route
+tests use an in-process stub model that answers exactly like the offline fake
+server, and the route tests replace the OpenAI client module and disable
+`fetch`.
+
+- Expected values are literals, the Stage 0 baseline files, or golden values
+  captured from the running app before the refactor
+  (`tests/golden/legacy-golden.json`); no snapshots are written by test runs.
+- Known defects are pinned by tests named `LEGACY D#`
+  (`fixtures/KNOWN_DEFECTS.md`); they describe current behaviour and are
+  inverted when a defect is fixed.
 
 ## Regression baseline (free, offline)
 
 `npm run baseline:check` builds the app, starts it on `127.0.0.1:3123` with a
 fake API key and a local fake OpenAI server, runs every file in
 `fixtures/srt/` through `/api/translate`, and compares the output byte-for-byte
-with `fixtures/legacy-baseline/`. The baseline records current behaviour,
+with `fixtures/legacy-baseline/`. It also compares hashes of every request
+sent to the fake OpenAI server (model, instructions, input, schema) with
+`fixtures/legacy-requests.json`. The baseline records current behaviour,
 **including known defects** (`fixtures/KNOWN_DEFECTS.md`), so a pass means
 "unchanged", not "correct". See `fixtures/README.md`.
 
