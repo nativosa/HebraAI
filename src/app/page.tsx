@@ -8,6 +8,7 @@ import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
+import { readTranslationStream } from "@/lib/translation/stream-client";
 import type { Settings } from "@/lib/types";
 
 export default function Home() {
@@ -110,66 +111,7 @@ export default function Home() {
       }
 
       // Handle streaming response
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let translatedText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-
-        // Process complete lines
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          try {
-            const msg = JSON.parse(line);
-            if (msg.type === "progress") {
-              setProgress(msg.progress);
-            } else if (msg.type === "complete") {
-              translatedText = msg.content;
-              setProgress(100);
-            } else if (msg.type === "error") {
-              throw new Error(msg.message || "Unknown error");
-            }
-          } catch (e) {
-            if (e instanceof SyntaxError) {
-              // JSON parse error, skip this line
-              continue;
-            }
-            throw e;
-          }
-        }
-
-        // Keep incomplete line in buffer
-        buffer = lines[lines.length - 1];
-      }
-
-      // Process any remaining buffer
-      if (buffer.trim()) {
-        try {
-          const msg = JSON.parse(buffer);
-          if (msg.type === "complete") {
-            translatedText = msg.content;
-            setProgress(100);
-          } else if (msg.type === "error") {
-            throw new Error(msg.message || "Unknown error");
-          }
-        } catch (e) {
-          if (!(e instanceof SyntaxError)) throw e;
-        }
-      }
-
-      if (!translatedText) {
-        throw new Error("No translation received");
-      }
+      const translatedText = await readTranslationStream(res, { onProgress: setProgress });
 
       setPreviewHe(translatedText);
       setTranslatedSrt(translatedText);
