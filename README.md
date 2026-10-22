@@ -56,3 +56,13 @@ files and real outputs in `fixtures/private/`, which is git-ignored.
   expose it publicly (port forwarding, tunnels, hosting), add authentication
   and rate limiting first. Otherwise anyone who can reach it can spend your
   OpenAI credits.
+
+## Troubleshooting
+
+**Windows: `npm run build` fails with `Invariant: Expected workUnitAsyncStorage
+to have a store`.** The terminal's current directory uses different letter case
+from the folder on disk (e.g. `cd C:\git\HebraAI` when the folder is
+`C:\GIT\HebraAI`). npm's `next.cmd` shim launches Next.js from the on-disk
+spelling while the project root keeps the typed one, so Node loads two copies
+of Next's internal modules. Open the terminal in the exactly-cased path, or
+rename the folder so its case matches what you type.
