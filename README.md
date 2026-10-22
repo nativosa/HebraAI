@@ -36,6 +36,7 @@ npm run dev                  # http://127.0.0.1:3000
 | `npm run baseline:check` | Offline regression check: no OpenAI calls (see below) |
 | `npm run baseline:capture -- --overwrite` | Explicitly regenerate `fixtures/expected/` (outputs and request fingerprints); the legacy references are never rewritten |
 | `npm run golden:capture -- --overwrite` | Regenerate the Stage 0 golden values (only for an intended base-prompt change) |
+| `npm run ui:smoke` | Browser smoke test of the real UI against the fake OpenAI server (needs Chrome, see below) |
 | `npm run check:openai-endpoint` | Offline check that only the official OpenAI endpoint can be used outside test mode |
 | `npm run srt:inspect <file>` | Print the structure of an SRT file (cue count, indices, BOM/EOL, hash) |
 | `npm run srt:compare <a> <b>` | Compare two SRT files' cue numbering and timestamps (ignores text) |
@@ -126,6 +127,23 @@ items, refusals, content filter, invalid JSON, 429/5xx with retries, permanent
 errors) and checks cancellation before and during the response stream: the
 OpenAI request in flight must be aborted and no further request sent. See
 `fixtures/README.md`.
+
+## Browser smoke test (free, offline)
+
+`npm run ui:smoke` builds the app, starts it in offline test mode against the
+local fake OpenAI server on a free `127.0.0.1` port, and drives the real UI in
+a headless browser: a successful translation and download, a partial result
+("Download Partial SRT", untranslated cue with timing and reason),
+cancelling while an OpenAI request is in flight (no late result, request
+aborted, no further requests), and a new translation after cancelling. No
+OpenAI calls; no extra npm packages (it uses the Chrome DevTools protocol).
+
+**Prerequisite:** Google Chrome, Chromium or Microsoft Edge installed. The
+script looks in the standard install locations and on `PATH`; set
+`CHROME_PATH` to use a specific binary. It uses a temporary browser profile
+in the OS temp directory and removes it, the browser, the app and the fake
+server afterwards, also when a check fails. Exit code 0 = all checks passed,
+1 = a check failed or an error occurred, 2 = no browser found.
 
 Real (paid) translations are never run automatically. Put private subtitle
 files and real outputs in `fixtures/private/`, which is git-ignored.
