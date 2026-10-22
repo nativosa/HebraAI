@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 test.srt
+
+# private subtitle files and real (paid) translation outputs
+fixtures/private/

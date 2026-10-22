@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "baseline:check": "node scripts/baseline.mjs check",
+    "baseline:capture": "node scripts/baseline.mjs capture",
+    "srt:inspect": "node scripts/srt-structure.mjs inspect",
+    "srt:compare": "node scripts/srt-structure.mjs compare"
   },
   "dependencies": {
     "next": "16.0.10",
