@@ -37,6 +37,8 @@ npm run dev                  # http://127.0.0.1:3000
 | `npm run baseline:check` | Offline regression check: no OpenAI calls (see below) |
 | `npm run baseline:capture -- --overwrite` | Explicitly regenerate `fixtures/expected/` (outputs and request fingerprints); the legacy references are never rewritten |
 | `npm run golden:capture -- --overwrite` | Regenerate the Stage 0 golden values (only for an intended base-prompt change) |
+| `npm run eval:estimate` / `eval:offline` / `eval:compare` | Translation-quality evaluation: plan and cost estimate, free run against the fake server, comparison (see `eval/README.md`) |
+| `npm run eval:real` | Real (paid) evaluation — refuses unless `HEBRAAI_REAL_EVAL=1`, prices are set and you confirm; per-run budget |
 | `npm run ui:smoke` | Browser smoke test of the real UI against the fake OpenAI server (needs Chrome, see below) |
 | `npm run check:openai-endpoint` | Offline check that only the official OpenAI endpoint can be used outside test mode |
 | `npm run srt:inspect <file>` | Print the structure of an SRT file (cue count, indices, BOM/EOL, hash) |

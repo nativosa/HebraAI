@@ -48,17 +48,28 @@ export function appUrl(port) {
 
 // A production build is used so the harness does not conflict with a running
 // `next dev` (which holds the .next/dev lock).
-export function startApp(baseURL, port) {
+//
+// Default: explicit offline test mode against the fake server at `baseURL`.
+// { real: true } (only for explicitly approved real evaluations): no test
+// mode and no endpoint override, so the endpoint guard pins the official
+// OpenAI API and Next loads the key from .env.local; `baseURL` is ignored.
+export function startApp(baseURL, port, { real = false } = {}) {
   const nextBin = join(ROOT, "node_modules", "next", "dist", "bin", "next");
-  const env = {
-    ...process.env,
-    // Explicit offline test mode: the only way the route accepts a custom
-    // endpoint (loopback + fake key only; see src/lib/openai-client.ts).
-    HEBRAAI_OFFLINE_TEST_MODE: "1",
-    OPENAI_API_KEY: FAKE_API_KEY,
-    OPENAI_BASE_URL: baseURL,
-    NEXT_TELEMETRY_DISABLED: "1",
-  };
+  const env = real
+    ? { ...process.env, NEXT_TELEMETRY_DISABLED: "1" }
+    : {
+        ...process.env,
+        // Explicit offline test mode: the only way the route accepts a custom
+        // endpoint (loopback + fake key only; see src/lib/openai-client.ts).
+        HEBRAAI_OFFLINE_TEST_MODE: "1",
+        OPENAI_API_KEY: FAKE_API_KEY,
+        OPENAI_BASE_URL: baseURL,
+        NEXT_TELEMETRY_DISABLED: "1",
+      };
+  if (real) {
+    delete env.HEBRAAI_OFFLINE_TEST_MODE;
+    delete env.OPENAI_BASE_URL;
+  }
   delete env.NODE_ENV;
   delete env.MAX_FILE_SIZE_BYTES; // guard checks assume the default cap
   console.log("building (next build)…");

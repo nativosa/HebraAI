@@ -13,6 +13,10 @@
     "baseline:capture": "node scripts/baseline.mjs capture",
     "golden:capture": "node scripts/capture-golden.mjs",
     "ui:smoke": "node scripts/ui-smoke.mjs",
+    "eval:estimate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval.mjs estimate",
+    "eval:offline": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval.mjs offline",
+    "eval:real": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/eval.mjs real",
+    "eval:compare": "node scripts/eval.mjs compare",
     "check:openai-endpoint": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-openai-endpoint.mjs",
     "srt:inspect": "node scripts/srt-structure.mjs inspect",
     "srt:compare": "node scripts/srt-structure.mjs compare"

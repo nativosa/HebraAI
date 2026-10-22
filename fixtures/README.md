@@ -7,7 +7,7 @@
 | `legacy-requests.json` | **Immutable Stage 0 reference.** Fingerprints of every request the original app sent to the (fake) OpenAI API: per case and request, the subtitle item count and SHA-256 hashes of canonical JSON (sorted keys) of the whole body, `model`, `instructions`, `input` and `text` (schema). Hashes only — no prompts, subtitle text or keys. |
 | `expected/` | **Current expectations**: one output file per case (same naming as `legacy-baseline/`) and `requests.json` (same format as `legacy-requests.json`). |
 | `expected/changes.json` | Every intentional difference between `expected/` and the legacy references, with its reason (defect id such as `D1`, or `new`). `outputs` is keyed by file name, `requests` by case name. |
-| `private/` | Git-ignored. Put your real subtitle files and real (paid) translation outputs here. |
+| `private/` | Git-ignored. Put your real subtitle files and real (paid) translation outputs here; a private evaluation dataset in `private/eval-cases/` (see `eval/README.md`); evaluation outputs saved with `--save-outputs` land in `private/eval-outputs/`. |
 
 ## Verifying (free, offline, no OpenAI calls)
 
