@@ -12,6 +12,8 @@
 //   3. cancel while an OpenAI request is in flight: cancelled state, no late
 //      result, in-flight request aborted, no further requests
 //   4. a new translation after cancelling completes
+//   5. context mode: character analysis (cancelled, then completed), edited
+//      sheet and notes sent with the context-mode translation request
 //
 // Requires Google Chrome or Chromium (or Edge). Set CHROME_PATH to use a
 // specific browser binary. Uses a free local port and a throw-away browser
@@ -204,6 +206,16 @@ async function run(state) {
       b.click();
       return "clicked";
     })()`);
+  // Sets an input, textarea or select the way React notices (value setter + event).
+  const setValue = (selector, value) =>
+    evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return "missing";
+      const proto = { SELECT: HTMLSelectElement, TEXTAREA: HTMLTextAreaElement }[el.tagName] ?? HTMLInputElement;
+      Object.getOwnPropertyDescriptor(proto.prototype, "value").set.call(el, ${JSON.stringify(value)});
+      el.dispatchEvent(new Event(el.tagName === "SELECT" ? "change" : "input", { bubbles: true }));
+      return "set";
+    })()`);
   const enPreview = () => evaluate(`(document.querySelectorAll("pre")[0]?.innerText ?? "").trim()`);
   const hePreview = () => evaluate(`(document.querySelectorAll("pre")[1]?.innerText ?? "").trim()`);
   const upload = async (fixture) => {
@@ -296,6 +308,49 @@ async function run(state) {
   rmSync(join(downloads, "translated.he.srt"), { force: true });
   await click("Download SRT");
   check((await waitDownload("translated.he.srt")) === expected("multi-chunk.sfx-on.srt"), "downloaded file equals the expected output");
+
+  // 5. Context mode: analyse characters (and cancel), edit the sheet, translate.
+  console.log("\n# 5. Context mode with character review (sfx-mixed.srt)");
+  await upload("sfx-mixed.srt");
+  await waitFor("new file loaded", async () => (await enPreview()).includes("JOHN: (sighs) Fine."));
+  check((await setValue('[aria-label="Translation mode"]', "context")) === "set", "Context-aware mode selected");
+  await waitFor("character review shown", async () => (await buttonState("Analyze characters")) === "enabled");
+  check((await setValue('[aria-label="Story notes"]', "Smoke test notes.")) === "set", "story notes entered");
+
+  mode = "delay";
+  let before = fake.requests.length;
+  let closedBefore5 = fake.stats.closedEarly;
+  check((await click("Analyze characters")) === "clicked", "Analyze clicked");
+  await waitFor("analysis request in flight", async () => fake.requests.length > before, 10_000);
+  check((await click("Cancel analysis")) === "clicked", "analysis cancelled while in flight");
+  await waitFor("analysis request aborted", async () => fake.stats.closedEarly > closedBefore5, 10_000);
+  await sleep(3_500);
+  check(!(await text()).includes("character found"), "no late analysis result");
+
+  mode = "echo";
+  before = fake.requests.length;
+  check((await click("Analyze characters")) === "clicked", "Analyze clicked again");
+  await waitFor("analysis done", async () => (await text()).includes("1 character found"));
+  const analysisBody = fake.requests[before];
+  const analysisText = analysisBody?.input?.[0]?.content?.[0]?.text ?? "";
+  check(analysisBody?.text?.format?.name === "character_sheet", "one analysis request sent", `${fake.requests.length - before} sent`);
+  check(analysisText.includes("JOHN: (sighs) Fine.") && analysisText.includes("[music playing]"), "analysis sees cues before sound-effect removal");
+  check(analysisText.includes("Smoke test notes."), "analysis receives the notes");
+  check((await text()).includes("low confidence · cues 5"), "confidence and evidence shown");
+  check((await setValue('tr[data-character="John"] [aria-label="Gender"]', "male")) === "set", "gender edited");
+  check((await setValue('tr[data-character="John"] [aria-label="Hebrew name"]', "ג׳ון")) === "set", "Hebrew name edited");
+
+  before = fake.requests.length;
+  check((await click("Translate to Hebrew")) === "clicked", "Translate clicked");
+  await waitFor("done", async () => (await text()).includes("Done. Review the preview"), 30_000);
+  const contextBodies = fake.requests.slice(before);
+  const instructions = contextBodies[0]?.instructions ?? "";
+  check(contextBodies.length === 1, "one translation request", `${contextBodies.length} sent`);
+  check(instructions.includes("Hebrew gender and number:"), "context instructions sent");
+  check(instructions.includes("- John => ג׳ון (male)"), "edited character sheet sent");
+  check(instructions.includes("Smoke test notes."), "notes sent with the translation");
+  check((contextBodies[0]?.input?.[0]?.content?.[0]?.text ?? "").includes('"context_before":[]'), "context payload sent");
+  check((await hePreview()) === expected("sfx-mixed.sfx-on.srt").trim(), "HE preview shows the translation");
 
   check(pageErrors.length === 0, "no page exceptions or console errors", pageErrors.join(" | ").slice(0, 300));
   check(fake.stats.rejected === 0, "fake server rejected no request");

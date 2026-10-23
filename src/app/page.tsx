@@ -4,6 +4,7 @@ import React, { useMemo, useRef, useState } from "react";
 import UploadCard from "@/components/UploadCard";
 import SettingsPanel from "@/components/SettingsPanel";
 import TranslatePanel from "@/components/TranslatePanel";
+import CharacterReview, { type CharacterRow } from "@/components/CharacterReview";
 import PreviewHeader from "@/components/PreviewHeader";
 import PreviewPane from "@/components/PreviewPane";
 import { downloadTextAsFile } from "@/lib/download";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/translation/report";
 import { RunControl } from "@/lib/translation/run-control";
 import { readTranslationStream } from "@/lib/translation/stream-client";
+import type { CharactersResult } from "@/lib/translation/characters";
 import type { Settings } from "@/lib/types";
 
 export default function Home() {
@@ -33,12 +35,21 @@ export default function Home() {
   const [usage, setUsage] = useState<string | null>(null);
   const runs = useRef<RunControl | null>(null);
 
+  // Context mode: character sheet from the optional analysis, edited by the user.
+  const [characters, setCharacters] = useState<CharacterRow[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisSummary, setAnalysisSummary] = useState<string | null>(null);
+  const analysis = useRef<AbortController | null>(null);
+
   const [settings, setSettings] = useState<Settings>({
+    mode: "classic",
     tone: "Neutral",
     preserveBreaks: true,
     maxChars: 42,
     glossary: "",
     removeSoundEffects: true,
+    notes: "",
   });
 
   const [search, setSearch] = useState("");
@@ -46,7 +57,7 @@ export default function Home() {
   const [previewHe, setPreviewHe] = useState<string>("");
   const [translatedSrt, setTranslatedSrt] = useState<string>("");
 
-  const canTranslate = !!file && !busy;
+  const canTranslate = !!file && !busy && !analyzing;
 
   const filteredPreview = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -84,6 +95,10 @@ export default function Home() {
     setPreviewEn("");
     setPreviewHe("");
     setTranslatedSrt("");
+    cancelAnalysis();
+    setCharacters([]);
+    setAnalysisError(null);
+    setAnalysisSummary(null);
     setFile(f);
 
     if (f) {
@@ -131,6 +146,14 @@ export default function Home() {
       fd.append("maxChars", String(settings.maxChars));
       fd.append("glossary", settings.glossary);
       fd.append("removeSoundEffects", String(settings.removeSoundEffects));
+      if (settings.mode === "context") {
+        fd.append("mode", "context");
+        fd.append("notes", settings.notes);
+        const sheet = characters
+          .filter((c) => c.name.trim())
+          .map(({ name, hebrewName, aliases, gender }) => ({ name, hebrewName, aliases, gender }));
+        fd.append("characters", JSON.stringify(sheet));
+      }
 
       const res = await fetch("/api/translate", {
         method: "POST",
@@ -180,6 +203,49 @@ export default function Home() {
         setBusy(false);
       }
     }
+  }
+
+  async function onAnalyze() {
+    if (!file) return;
+    cancelAnalysis();
+    const controller = new AbortController();
+    analysis.current = controller;
+    setAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisSummary(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("notes", settings.notes);
+      const res = await fetch("/api/characters", { method: "POST", body: fd, signal: controller.signal });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || `Request failed (${res.status})`);
+      if (analysis.current !== controller) return;
+      const result = body as CharactersResult;
+      setCharacters(result.characters.map((c, i) => ({ ...c, key: i + 1 })));
+      setAnalysisSummary(
+        `${result.characters.length} character${result.characters.length === 1 ? "" : "s"} found` +
+          (result.analyzedCues < result.totalCues ? ` (first ${result.analyzedCues} of ${result.totalCues} cues analysed)` : "") +
+          ` · ${result.requests} request${result.requests === 1 ? "" : "s"} · ${result.usage.inputTokens.toLocaleString("en-US")} input / ` +
+          `${result.usage.outputTokens.toLocaleString("en-US")} output tokens` +
+          (result.estimatedCostUsd === undefined ? "" : ` · ~$${result.estimatedCostUsd.toFixed(4)} (estimate)`)
+      );
+    } catch (err) {
+      if (analysis.current !== controller) return;
+      setAnalysisError(errorMessage(err));
+    } finally {
+      if (analysis.current === controller) {
+        analysis.current = null;
+        setAnalyzing(false);
+      }
+    }
+  }
+
+  // Aborts the analysis request; nothing from it is kept.
+  function cancelAnalysis() {
+    analysis.current?.abort();
+    analysis.current = null;
+    setAnalyzing(false);
   }
 
   // Stops the server job and discards everything from this run, even a
@@ -239,7 +305,20 @@ export default function Home() {
                   onDrop={onDrop}
                 />
 
-                <SettingsPanel settings={settings} onChange={setSettings} />
+                <SettingsPanel settings={settings} onChange={setSettings}>
+                  {settings.mode === "context" && (
+                    <CharacterReview
+                      rows={characters}
+                      onChange={setCharacters}
+                      canAnalyze={!!file && !busy}
+                      analyzing={analyzing}
+                      error={analysisError}
+                      summary={analysisSummary}
+                      onAnalyze={onAnalyze}
+                      onCancel={cancelAnalysis}
+                    />
+                  )}
+                </SettingsPanel>
 
                 <TranslatePanel
                   canTranslate={canTranslate}
