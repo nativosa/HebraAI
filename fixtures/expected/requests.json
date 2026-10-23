@@ -162,6 +162,30 @@
         }
       }
     ],
+    "prompt.context": [
+      {
+        "items": 0,
+        "sha256": {
+          "request": "f93ef5f766affd00156bafbda5691b3104ef192ebee93be299544564f9cf4624",
+          "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
+          "instructions": "6628e42ec499184a507d5a6599b1725157fbe85d86ba23245b2d152afb962882",
+          "input": "61ee1d84b0c2928886038b428a61ddc4715acd6ae0185183c1a577248f59cab2",
+          "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
+        }
+      }
+    ],
+    "prompt.context.characters": [
+      {
+        "items": 0,
+        "sha256": {
+          "request": "e76a8ce195d4ba89a6f47ff1d6e5b2f59443c72887e034319f62fe706d5620f3",
+          "model": "aec5969dc6a12607d5a27e769f83548558071916554d2ee10910216aa81568bc",
+          "instructions": "de3578024c51346649b5fb544bd5618e5bb246c8f86d24f2ce082e8350667315",
+          "input": "61ee1d84b0c2928886038b428a61ddc4715acd6ae0185183c1a577248f59cab2",
+          "text": "bc0e0341ef5d66f0a8cc49ca6ff4632b8b6703113a5da008c8634a1fd27a1111"
+        }
+      }
+    ],
     "prompt.formal.breaks-off": [
       {
         "items": 4,

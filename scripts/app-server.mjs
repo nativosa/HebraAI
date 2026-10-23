@@ -40,6 +40,16 @@ export const PROMPT_VARIANTS = [
   // Stage 2 (D11): glossary sent with the instructions.
   ["glossary", { glossary: "John = ג׳ון\nFBI = FBI" }],
   ["glossary-ignored-lines", { glossary: "John = ג׳ון\nno separator\n= x" }],
+  // Stage 3: context mode, with and without the character sheet and notes.
+  ["context", { mode: "context" }],
+  [
+    "context.characters",
+    {
+      mode: "context",
+      characters: JSON.stringify([{ name: "John", hebrewName: "ג׳ון", aliases: ["Johnny"], gender: "male" }]),
+      notes: "A short test scene.",
+    },
+  ],
 ].map(([name, fields]) => ({ name, fields: { ...PROMPT_BASE, ...fields } }));
 
 export function appUrl(port) {

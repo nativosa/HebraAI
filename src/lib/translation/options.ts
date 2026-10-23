@@ -1,4 +1,5 @@
 import type { Tone } from "@/lib/types";
+import { parseCharacters, type Character } from "./characters";
 
 export type GlossaryEntry = { term: string; translation: string };
 
@@ -10,12 +11,20 @@ export type Glossary = {
 export const GLOSSARY_MAX_ENTRIES = 100;
 export const GLOSSARY_MAX_CHARS = 4000;
 
+// classic: the original requests (default). context: Hebrew gender rules,
+// neighbouring cues, and the optional character sheet and notes.
+export type TranslationMode = "classic" | "context";
+
 export type TranslateOptions = {
+  mode: TranslationMode;
   tone: Tone;
   removeSoundEffects: boolean;
   preserveBreaks: boolean;
   maxChars: number;
   glossary: Glossary;
+  // Used in context mode only.
+  characters: Character[];
+  notes: string;
 };
 
 // Reads and sanitizes the translation options from the request form.
@@ -36,7 +45,18 @@ export function parseTranslateOptions(form: FormData): TranslateOptions {
   const glossaryRaw = form.get("glossary");
   const glossary = parseGlossary(typeof glossaryRaw === "string" ? glossaryRaw : "");
 
-  return { tone, removeSoundEffects, preserveBreaks, maxChars, glossary };
+  const mode = form.get("mode") === "context" ? "context" : "classic";
+  // Invalid sheets are rejected by the route (parseCharacters reports why).
+  const sheet = parseCharacters(formText(form, "characters"));
+  const characters = "characters" in sheet ? sheet.characters : [];
+  const notes = formText(form, "notes").trim();
+
+  return { mode, tone, removeSoundEffects, preserveBreaks, maxChars, glossary, characters, notes };
+}
+
+export function formText(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : "";
 }
 
 // One "term = translation" per line (the first "=" separates them). Blank

@@ -12,12 +12,27 @@ describe("parseTranslateOptions", () => {
     expect(
       parseTranslateOptions(form({ tone: "Neutral", preserveBreaks: "true", maxChars: "42", removeSoundEffects: "true" }))
     ).toEqual({
+      mode: "classic",
       tone: "Neutral",
       removeSoundEffects: true,
       preserveBreaks: true,
       maxChars: 42,
       glossary: { entries: [], ignoredLines: [] },
+      characters: [],
+      notes: "",
     });
+  });
+
+  it("reads the mode, characters and notes", () => {
+    expect(parseTranslateOptions(form({ mode: "context" })).mode).toBe("context");
+    expect(parseTranslateOptions(form({ mode: "Context" })).mode).toBe("classic");
+    expect(parseTranslateOptions(form({ mode: new Blob(["context"]) })).mode).toBe("classic");
+    const o = parseTranslateOptions(
+      form({ characters: JSON.stringify([{ name: " Dana ", hebrewName: "דנה", aliases: [], gender: "female" }]), notes: " a heist film " })
+    );
+    expect(o.characters).toEqual([{ name: "Dana", hebrewName: "דנה", aliases: [], gender: "female" }]);
+    expect(o.notes).toBe("a heist film");
+    expect(parseTranslateOptions(form({ characters: "not json" })).characters).toEqual([]);
   });
 
   it.each([

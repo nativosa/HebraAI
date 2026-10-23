@@ -52,12 +52,74 @@ export function buildInstructions({
   return instructions;
 }
 
-// The Responses API request for one chunk of cues.
+// Context mode: the classic instructions plus Hebrew gender and number rules,
+// the optional character sheet and the user's notes about the story.
+export function buildContextInstructions(
+  options: Pick<TranslateOptions, "tone" | "maxChars" | "preserveBreaks" | "characters" | "notes"> & { glossary?: Glossary }
+): string {
+  let instructions =
+    buildInstructions(options) +
+    "\n\nHebrew gender and number:\n" +
+    "- First-person forms (verbs, adjectives) follow the speaker's gender; second-person forms and imperatives follow the addressee's gender and number.\n" +
+    "- Identify speakers and addressees from speaker labels (e.g. \"MARY:\"), names, forms of address and the neighbouring subtitles.\n" +
+    "- Several addressees: plural (masculine plural for mixed or unknown groups, feminine plural only for all-female groups).\n" +
+    "- When a gender is unknown, prefer natural gender-neutral phrasing; otherwise use the masculine form. Keep each person's gender consistent.\n" +
+    "- Never invent names or genders. Keep the Hebrew spelling of each name consistent.";
+
+  if (options.characters.length) {
+    instructions +=
+      "\n\nCharacters (checked by the user; use these genders and Hebrew spellings):" +
+      options.characters
+        .map((c) => {
+          const hebrew = c.hebrewName ? ` => ${c.hebrewName}` : "";
+          const aliases = c.aliases.length ? `; also called ${c.aliases.join(", ")}` : "";
+          return `\n- ${c.name}${hebrew} (${c.gender}${aliases})`;
+        })
+        .join("");
+  }
+  if (options.notes) {
+    instructions += "\n\nNotes about the story from the user (background only, do not translate):\n" + options.notes;
+  }
+  return instructions;
+}
+
+// The Responses API request for one chunk of cues (classic mode).
 export function buildChunkRequest(instructions: string, cuesPart: Cue[]): ResponseCreateParamsNonStreaming {
   // The wire key stays "index" (unchanged prompt and schema); it carries the
   // cue's internal id, so cues sharing an SRT number stay distinct.
   const payload = cuesPart.map((c) => ({ index: c.id, text: c.text }));
 
+  return chunkRequest(
+    instructions,
+    "Translate this JSON array of subtitle items.\n" +
+      "Return a JSON object with key 'items' which is an array of {index, text_he}.\n\n" +
+      JSON.stringify(payload)
+  );
+}
+
+// Context mode: the chunk's items plus neighbouring source cues, which are
+// sent without ids so they can never be returned as translations.
+export function buildContextChunkRequest(
+  instructions: string,
+  cuesPart: Cue[],
+  { before, after }: { before: Cue[]; after: Cue[] }
+): ResponseCreateParamsNonStreaming {
+  const payload = {
+    context_before: before.map((c) => c.text),
+    items: cuesPart.map((c) => ({ index: c.id, text: c.text })),
+    context_after: after.map((c) => c.text),
+  };
+
+  return chunkRequest(
+    instructions,
+    "Translate the subtitle items in 'items'. 'context_before' and 'context_after' are the neighbouring " +
+      "subtitles, for understanding only: do not translate them.\n" +
+      "Return a JSON object with key 'items' which is an array of {index, text_he}, one per item.\n\n" +
+      JSON.stringify(payload)
+  );
+}
+
+function chunkRequest(instructions: string, text: string): ResponseCreateParamsNonStreaming {
   return {
     model: "gpt-5.2",
     instructions,
@@ -67,10 +129,7 @@ export function buildChunkRequest(instructions: string, cuesPart: Cue[]): Respon
         content: [
           {
             type: "input_text",
-            text:
-              "Translate this JSON array of subtitle items.\n" +
-              "Return a JSON object with key 'items' which is an array of {index, text_he}.\n\n" +
-              JSON.stringify(payload),
+            text,
           },
         ],
       },

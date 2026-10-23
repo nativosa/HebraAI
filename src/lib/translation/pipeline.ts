@@ -2,7 +2,7 @@ import type { ResponseCreateParamsNonStreaming } from "openai/resources/response
 import { errorMessage } from "@/lib/errors";
 import { buildSrt } from "@/lib/srt/build";
 import type { Cue } from "@/lib/srt/parse";
-import { buildChunkRequest } from "./prompt";
+import { buildChunkRequest, buildContextChunkRequest } from "./prompt";
 import { FAILURE_LABELS, NO_USAGE, addUsage, estimateCostUsd, type TokenPrices, type TokenUsage, type TranslationReport } from "./report";
 import { REPAIRABLE, validateChunkResponse, type FailureReason, type ModelResponse } from "./response";
 import { MAX_RETRIES_PER_REQUEST, decideRetry, sleep as defaultSleep } from "./retry";
@@ -35,8 +35,15 @@ export type StreamEvent =
 // Facts about the input that the final report carries through.
 export type TranslateContext = Pick<TranslationReport, "parse" | "removedSoundEffectCues" | "glossary">;
 
+// Neighbouring source cues sent with a chunk in context mode.
+export type ContextWindow = { before: number; after: number };
+type Around = { before: Cue[]; after: Cue[] };
+
 export type TranslateOptions = {
   context?: TranslateContext;
+  // Context mode: send this many cues before and after each chunk as
+  // read-only context. Omitted = classic requests.
+  contextWindow?: ContextWindow;
   maxAttemptsPerChunk?: number;
   // Cancels the job: no further chunks, requests, retries or repairs; the
   // request in flight is aborted.
@@ -71,7 +78,7 @@ const WHOLE_ANSWER_FAILURES: ReadonlySet<FailureReason> = new Set(["invalid-json
 // Shared state of one translation job.
 type Job = {
   createResponse: CreateResponse;
-  instructions: string;
+  buildRequest: (subset: Cue[], around: Around) => ResponseCreateParamsNonStreaming;
   maxAttempts: number;
   signal?: AbortSignal;
   sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
@@ -93,6 +100,7 @@ export async function* translateCues(
   instructions: string,
   {
     context = NO_CONTEXT,
+    contextWindow,
     maxAttemptsPerChunk = DEFAULT_MAX_ATTEMPTS_PER_CHUNK,
     signal,
     sleep = defaultSleep,
@@ -106,7 +114,9 @@ export async function* translateCues(
   const totalChunks = cuesChunks.length;
   const job: Job = {
     createResponse,
-    instructions,
+    buildRequest: contextWindow
+      ? (subset, around) => buildContextChunkRequest(instructions, subset, around)
+      : (subset) => buildChunkRequest(instructions, subset),
     maxAttempts: maxAttemptsPerChunk,
     signal,
     sleep,
@@ -123,7 +133,12 @@ export async function* translateCues(
   for (let chunkIndex = 0; chunkIndex < cuesChunks.length; chunkIndex++) {
     if (signal?.aborted) return;
     try {
-      yield* translateChunk(job, cuesChunks[chunkIndex], chunkIndex + 1);
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = start + cuesChunks[chunkIndex].length;
+      const around = contextWindow
+        ? { before: cues.slice(Math.max(0, start - contextWindow.before), start), after: cues.slice(end, end + contextWindow.after) }
+        : { before: [], after: [] };
+      yield* translateChunk(job, cuesChunks[chunkIndex], chunkIndex + 1, around);
     } catch (error) {
       if (error instanceof Cancelled || signal?.aborted) return;
       failure = errorMessage(error);
@@ -151,11 +166,11 @@ export async function* translateCues(
 // content-filter results are never repaired. Every request, including
 // retries after temporary errors, counts against the chunk's budget. A
 // request that still fails is thrown.
-async function* translateChunk(job: Job, cues: Cue[], chunkNumber: number): AsyncGenerator<StreamEvent> {
+async function* translateChunk(job: Job, cues: Cue[], chunkNumber: number, around: Around): AsyncGenerator<StreamEvent> {
   let budget = job.maxAttempts;
 
   async function* send(subset: Cue[]): AsyncGenerator<StreamEvent> {
-    const params = buildChunkRequest(job.instructions, subset);
+    const params = job.buildRequest(subset, around);
     for (let retry = 1; ; retry++) {
       if (job.signal?.aborted) throw new Cancelled();
       budget--;
