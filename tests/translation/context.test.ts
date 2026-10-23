@@ -20,7 +20,7 @@ function payloadOf(params: ResponseCreateParamsNonStreaming): ContextPayload {
 }
 
 const WINDOW = { before: 8, after: 4 };
-const base = { tone: "Neutral" as const, maxChars: 42, preserveBreaks: true, characters: [], notes: "" };
+const base = { tone: "Neutral" as const, maxChars: 42, preserveBreaks: true, notes: "" };
 
 describe("buildContextInstructions", () => {
   it("extends the classic instructions with Hebrew gender rules", () => {
@@ -33,14 +33,10 @@ describe("buildContextInstructions", () => {
   });
 
   it("adds the character sheet and the notes", () => {
-    const text = buildContextInstructions({
-      ...base,
-      characters: [
-        { name: "Dana", hebrewName: "דנה", aliases: ["Danny"], gender: "female" },
-        { name: "Alex", hebrewName: "", aliases: [], gender: "unknown" },
-      ],
-      notes: "Dana and Alex are sisters.",
-    });
+    const text = buildContextInstructions({ ...base, notes: "Dana and Alex are sisters." }, [
+      { name: "Dana", hebrewName: "דנה", aliases: ["Danny"], gender: "female" },
+      { name: "Alex", hebrewName: "", aliases: [], gender: "unknown" },
+    ]);
     expect(text).toContain("\n- Dana => דנה (female; also called Danny)");
     expect(text).toContain("\n- Alex (unknown)");
     expect(text.endsWith("background only, do not translate):\nDana and Alex are sisters.")).toBe(true);

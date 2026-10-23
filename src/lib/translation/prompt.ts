@@ -1,5 +1,6 @@
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import type { Cue } from "@/lib/srt/parse";
+import type { Character } from "./characters";
 import type { Glossary, TranslateOptions } from "./options";
 
 export function buildInstructions({
@@ -55,7 +56,8 @@ export function buildInstructions({
 // Context mode: the classic instructions plus Hebrew gender and number rules,
 // the optional character sheet and the user's notes about the story.
 export function buildContextInstructions(
-  options: Pick<TranslateOptions, "tone" | "maxChars" | "preserveBreaks" | "characters" | "notes"> & { glossary?: Glossary }
+  options: Pick<TranslateOptions, "tone" | "maxChars" | "preserveBreaks" | "notes"> & { glossary?: Glossary },
+  characters: Character[] = []
 ): string {
   let instructions =
     buildInstructions(options) +
@@ -66,10 +68,10 @@ export function buildContextInstructions(
     "- When a gender is unknown, prefer natural gender-neutral phrasing; otherwise use the masculine form. Keep each person's gender consistent.\n" +
     "- Never invent names or genders. Keep the Hebrew spelling of each name consistent.";
 
-  if (options.characters.length) {
+  if (characters.length) {
     instructions +=
       "\n\nCharacters (checked by the user; use these genders and Hebrew spellings):" +
-      options.characters
+      characters
         .map((c) => {
           const hebrew = c.hebrewName ? ` => ${c.hebrewName}` : "";
           const aliases = c.aliases.length ? `; also called ${c.aliases.join(", ")}` : "";

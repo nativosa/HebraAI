@@ -18,21 +18,15 @@ describe("parseTranslateOptions", () => {
       preserveBreaks: true,
       maxChars: 42,
       glossary: { entries: [], ignoredLines: [] },
-      characters: [],
       notes: "",
     });
   });
 
-  it("reads the mode, characters and notes", () => {
+  it("reads the mode and notes", () => {
     expect(parseTranslateOptions(form({ mode: "context" })).mode).toBe("context");
     expect(parseTranslateOptions(form({ mode: "Context" })).mode).toBe("classic");
     expect(parseTranslateOptions(form({ mode: new Blob(["context"]) })).mode).toBe("classic");
-    const o = parseTranslateOptions(
-      form({ characters: JSON.stringify([{ name: " Dana ", hebrewName: "דנה", aliases: [], gender: "female" }]), notes: " a heist film " })
-    );
-    expect(o.characters).toEqual([{ name: "Dana", hebrewName: "דנה", aliases: [], gender: "female" }]);
-    expect(o.notes).toBe("a heist film");
-    expect(parseTranslateOptions(form({ characters: "not json" })).characters).toEqual([]);
+    expect(parseTranslateOptions(form({ notes: " a heist film " })).notes).toBe("a heist film");
   });
 
   it.each([

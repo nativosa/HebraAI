@@ -1,5 +1,4 @@
 import type { Tone } from "@/lib/types";
-import { parseCharacters, type Character } from "./characters";
 
 export type GlossaryEntry = { term: string; translation: string };
 
@@ -22,8 +21,7 @@ export type TranslateOptions = {
   preserveBreaks: boolean;
   maxChars: number;
   glossary: Glossary;
-  // Used in context mode only.
-  characters: Character[];
+  // Context mode only (the character sheet is parsed by the route).
   notes: string;
 };
 
@@ -46,12 +44,9 @@ export function parseTranslateOptions(form: FormData): TranslateOptions {
   const glossary = parseGlossary(typeof glossaryRaw === "string" ? glossaryRaw : "");
 
   const mode = form.get("mode") === "context" ? "context" : "classic";
-  // Invalid sheets are rejected by the route (parseCharacters reports why).
-  const sheet = parseCharacters(formText(form, "characters"));
-  const characters = "characters" in sheet ? sheet.characters : [];
   const notes = formText(form, "notes").trim();
 
-  return { mode, tone, removeSoundEffects, preserveBreaks, maxChars, glossary, characters, notes };
+  return { mode, tone, removeSoundEffects, preserveBreaks, maxChars, glossary, notes };
 }
 
 export function formText(form: FormData, name: string): string {
