@@ -54,12 +54,14 @@ npm run dev                  # http://127.0.0.1:3000
   not guessed at. Both are listed under "Input file notes" with line numbers.
 - **Output.** Cues keep their input order and original numbers; only when a
   cue had no number is the output renumbered 1..N. Byte order mark and CRLF
-  line endings are not preserved (output is UTF-8, LF).
-- **Complete vs partial.** "Download SRT" appears only when every cue was
-  translated. If some cues could not be translated, the result is marked
-  **partial**: those cues keep their English text, the panel lists their
-  numbers, timings and reasons, and the button reads **Download Partial SRT**
-  (`translated.he.PARTIAL.srt`). If nothing was translated, an error is shown.
+  line endings are not preserved (output is UTF-8, LF). Export options can
+  add a UTF-8 BOM or renumber every cue 1..N (both off by default, so the
+  default file is unchanged).
+- **Complete vs partial.** If some cues could not be translated, the result
+  is marked **partial**: those cues keep their English text and are
+  highlighted in the review with the reason, and the button reads
+  **Download partial** (`<name>.PARTIAL.he.srt`). If nothing was translated,
+  an error is shown.
 - **Checking the model's answer.** Each answer must contain exactly one
   non-empty translation for every cue sent. Names, English terms and text
   identical to the source are accepted. Missing, empty or conflicting
@@ -100,6 +102,32 @@ npm run dev                  # http://127.0.0.1:3000
   analysis can be cancelled; it is limited to 3 requests (retries
   included); if it fails, translation works without it.
 
+## Review, editing and export
+
+- **Review.** English and Hebrew side by side, one row per cue (matched by
+  the internal cue id, so repeated or missing numbers stay correct), with
+  the cue number and timestamps. On narrow screens each cue is a card with
+  the Hebrew below the English. Search covers both languages; filters show
+  untranslated cues (not translated by the model and not yet edited),
+  edited cues and removed sound-effect cues (shown muted, not exported).
+  Filtering and search never change what is exported.
+- **Editing.** Click a Hebrew line (or Tab to it and press Enter) to edit it.
+  Save (Ctrl+Enter) or Cancel (Esc); line breaks are kept and line lengths
+  are shown against *Max chars per line*. An empty edit reverts to the model's
+  text. Edits that would break the SRT structure (a blank line, a line that
+  reads as a timing line) are rejected with a message, never rewritten.
+  Untranslated cues can be translated by hand.
+- **Export.** *Download* saves `<input name>.he.srt` (`Movie.en.srt` →
+  `Movie.he.srt`) with the edits applied; *Copy SRT* copies the same text.
+  Both are disabled while a translation runs. Opening another file or
+  translating again asks first when edits, or a result that was neither
+  downloaded nor copied, would be lost; leaving the page asks too.
+- **Appearance and stored preferences.** Light, Dark or System theme. The
+  theme, translation settings (including the glossary), export options and
+  the hidden/shown workflow panel are kept in the browser's `localStorage`.
+  Subtitles, translations, edits, story notes and character sheets are never
+  stored; the API key never reaches the browser.
+
 ## Code layout
 
 | Path | Responsibility |
@@ -117,6 +145,9 @@ npm run dev                  # http://127.0.0.1:3000
 | `src/lib/translation/report.ts` | Report sent with the final event (counts, line numbers, timings — no subtitle text) and its UI texts |
 | `src/lib/translation/stream-client.ts`, `run-control.ts` | Browser side: reading the NDJSON stream, cancelling and discarding stale runs |
 | `src/lib/openai-client.ts` | OpenAI client pinned to the official endpoint; SDK retries off, 120 s timeout per attempt |
+| `src/lib/review/` | Browser side, pure: review rows joined by cue id and filters (`rows`), edit checks and the exported SRT (`export`), file name (`filename`), unsaved-work warning (`unsaved`), stored preferences (`prefs`, `prefs-store`) |
+| `src/components/` | UI: workflow panel (`UploadCard`, `SettingsPanel`, `CharacterReview`, `TranslatePanel`), `CueReview` (review, editor, export), `ThemeToggle`, `ConfirmDialog`, shared controls in `ui.tsx` |
+| `src/app/globals.css` | Colour tokens for the light and dark themes (Tailwind `@theme`) |
 
 ## Tests (free, offline)
 
@@ -154,11 +185,15 @@ OpenAI request in flight must be aborted and no further request sent. See
 
 `npm run ui:smoke` builds the app, starts it in offline test mode against the
 local fake OpenAI server on a free `127.0.0.1` port, and drives the real UI in
-a headless browser: a successful translation and download, a partial result
-("Download Partial SRT", untranslated cue with timing and reason),
-cancelling while an OpenAI request is in flight (no late result, request
-aborted, no further requests), a new translation after cancelling, and context mode (character analysis
-and its cancellation, editing the sheet, the context request). No
+a headless browser: a successful translation and download, editing (line
+breaks, rejected edits, keyboard), search and filters, the unsaved-work
+dialog, copy, a partial result (untranslated cue, manual translation,
+partial download), export options (BOM, renumbering), cancelling while an
+OpenAI request is in flight (no late result, request aborted, no further
+requests), scroll position when saving an edit, context mode (character
+analysis and its cancellation, editing the sheet, the context request),
+themes, preferences across a reload (and that nothing private is stored),
+and the mobile layout. `SMOKE_SCREENSHOTS=<dir>` also saves screenshots. No
 OpenAI calls; no extra npm packages (it uses the Chrome DevTools protocol).
 
 **Prerequisite:** Google Chrome, Chromium or Microsoft Edge installed. The
