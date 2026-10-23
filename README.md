@@ -83,15 +83,34 @@ npm run dev                  # http://127.0.0.1:3000
   anywhere in a cue (including parenthetical speaker labels such as
   `(Mary)` and song lyrics), and cues that contain nothing else. Formatting
   tags such as `<i>` are kept around the remaining dialogue.
+- **Translation mode.** *Classic* (default) sends exactly the original
+  requests. *Context-aware* adds Hebrew gender and number rules to the
+  instructions and sends the 8 cues before and 4 cues after each chunk as
+  read-only context (they carry no ids, so they can never be returned as
+  translations); about 20 % more input tokens, same number of requests.
+  Optional **story notes** (up to 4,000 characters) are sent with the
+  instructions.
+- **Characters (context-aware only, optional).** *Analyze characters* sends
+  one extra request with the whole subtitle text before sound-effect
+  removal (speaker labels are evidence; up to 200,000 characters, later
+  cues are left out and the summary says so). It lists names, Hebrew
+  spellings, gender (male / female / unknown), confidence and evidence cue
+  numbers. Review and edit the table (gender, Hebrew spelling, add/remove
+  rows) before translating; the edited list is sent with every chunk. The
+  analysis can be cancelled; it is limited to 3 requests (retries
+  included); if it fails, translation works without it.
 
 ## Code layout
 
 | Path | Responsibility |
 |---|---|
 | `src/app/api/translate/route.ts` | HTTP only: key check, upload guards, error responses, NDJSON stream, cancellation |
+| `src/app/api/characters/route.ts` | Optional character analysis (same guards, JSON response, cancellation) |
+| `src/lib/server-env.ts` | Server settings from the environment (file size, attempts, prices) |
 | `src/lib/srt/` | Pure SRT handling: `parse` (cue ids, recovered / unparsed input), `build`, `sound-effects` filtering |
 | `src/lib/translation/options.ts` | Reads and sanitizes the form options, incl. the glossary |
-| `src/lib/translation/prompt.ts` | Instructions and the Responses API request for one chunk |
+| `src/lib/translation/prompt.ts` | Instructions (classic and context) and the Responses API request for one chunk |
+| `src/lib/translation/characters.ts` | Character sheet validation, analysis request, answer validation and retries |
 | `src/lib/translation/response.ts` | Validates a model answer per cue (refusal, incomplete, invalid, missing, empty …) |
 | `src/lib/translation/retry.ts` | Which errors are temporary, backoff delays, abortable sleep |
 | `src/lib/translation/pipeline.ts` | Chunks of 60 cues, sequential requests, repair, retries, request budget, cancellation, final event; the model call is passed in |
@@ -138,7 +157,8 @@ local fake OpenAI server on a free `127.0.0.1` port, and drives the real UI in
 a headless browser: a successful translation and download, a partial result
 ("Download Partial SRT", untranslated cue with timing and reason),
 cancelling while an OpenAI request is in flight (no late result, request
-aborted, no further requests), and a new translation after cancelling. No
+aborted, no further requests), a new translation after cancelling, and context mode (character analysis
+and its cancellation, editing the sheet, the context request). No
 OpenAI calls; no extra npm packages (it uses the Chrome DevTools protocol).
 
 **Prerequisite:** Google Chrome, Chromium or Microsoft Edge installed. The
