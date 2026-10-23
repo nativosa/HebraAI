@@ -67,6 +67,16 @@ describe("readTranslationStream", () => {
     });
   });
 
+  it("returns the per-cue results of the final event", async () => {
+    const cues = [{ id: 1, number: 1, start: "00:00:01,000", end: "00:00:02,000", text: "שלום" }];
+    expect(await readTranslationStream(streamed(line({ type: "complete", content: "x", cues })))).toEqual({
+      content: "x",
+      cues,
+      partial: false,
+    });
+    expect((await readTranslationStream(streamed(line({ type: "complete", content: "x", cues: "bad" })))).cues).toBeUndefined();
+  });
+
   it("reports retry events", async () => {
     const retries: unknown[] = [];
     await readTranslationStream(

@@ -113,7 +113,9 @@ describe("POST /api/translate: streaming", () => {
     const captured: string[] = golden.streams["basic.srt"].lines;
     const lines = body.split("\n").filter(Boolean);
     expect(lines.slice(0, -1)).toEqual(captured.slice(0, -1));
-    expect(JSON.parse(lines.at(-1)!)).toEqual({
+    const { cues: resultCues, ...final } = JSON.parse(lines.at(-1)!);
+    expect(resultCues.map((c: { id: number }) => c.id)).toEqual([1, 2, 3, 4]);
+    expect(final).toEqual({
       ...JSON.parse(captured.at(-1)!),
       report: {
         cues: 4,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { APIError } from "openai";
+import { buildSrt } from "@/lib/srt/build";
 import { parseSrt } from "@/lib/srt/parse";
 import { CHUNK_SIZE, DEFAULT_MAX_ATTEMPTS_PER_CHUNK, chunk, translateCues, type StreamEvent } from "@/lib/translation/pipeline";
 import { buildChunkRequest } from "@/lib/translation/prompt";
@@ -131,6 +132,34 @@ describe("translateCues: output order and report", () => {
   });
 });
 
+describe("translateCues: per-cue results", () => {
+  it.each(["basic.srt", "duplicate-index.srt", "quirks.srt", "multiline-italics.srt", "multi-chunk.srt"])(
+    "%s: content is buildSrt(cues), with every cue in input order",
+    async (name) => {
+      const input = parseSrt(readSrtFixture(name)).cues;
+      const last = (await collect(translateCues(stubModel().createResponse, input, "instr"))).at(-1)!;
+      if (last.type !== "complete") throw new Error(last.type);
+      expect(buildSrt(last.cues)).toBe(last.content);
+      expect(last.cues.map(({ id, number, start, end }) => ({ id, number, start, end }))).toEqual(
+        input.map(({ id, number, start, end }) => ({ id, number, start, end }))
+      );
+    }
+  );
+
+  it("partial: untranslated cues carry their English text; error events carry no cues", async () => {
+    const model = stubModel({ 1: itemsFor(1), 2: itemsFor() });
+    const partial = (await collect(translateCues(model.createResponse, cues(2), "instr"))).at(-1)!;
+    if (partial.type !== "partial") throw new Error(partial.type);
+    expect(partial.cues.map((c) => c.text)).toEqual(["HE1", "Line 2"]);
+    expect(buildSrt(partial.cues)).toBe(partial.content);
+
+    const failing = stubModel({ 1: itemsFor(), 2: itemsFor() });
+    const error = (await collect(translateCues(failing.createResponse, cues(1), "instr"))).at(-1)!;
+    expect(error.type).toBe("error");
+    expect("cues" in error).toBe(false);
+  });
+});
+
 describe("translateCues: validation and partial results", () => {
   const final = (events: StreamEvent[]) => events.at(-1)!;
 
@@ -148,6 +177,7 @@ describe("translateCues: validation and partial results", () => {
         "1\n00:00:01,000 --> 00:00:02,000\nHE1\n\n" +
         "2\n00:00:01,000 --> 00:00:02,000\nLine 2\n\n" +
         "3\n00:00:01,000 --> 00:00:02,000\nHE3\n",
+      cues: [cue(1, "HE1"), cue(2, "Line 2"), cue(3, "HE3")],
       report: {
         cues: 3,
         translated: 2,

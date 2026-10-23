@@ -1,9 +1,12 @@
 // Browser-side reader for the /api/translate NDJSON stream.
 
+import type { Cue } from "@/lib/srt/parse";
 import type { TranslationReport } from "./report";
 
 // partial: some cues could not be translated and are kept in English.
-export type TranslationResult = { content: string; report?: TranslationReport; partial: boolean };
+// cues: the result per cue (content is buildSrt(cues)); absent if the
+// server did not send it.
+export type TranslationResult = { content: string; cues?: Cue[]; report?: TranslationReport; partial: boolean };
 
 export type RetryInfo = { chunk: number; attempt: number; delayMs: number; reason: string };
 
@@ -43,7 +46,8 @@ export async function readTranslationStream(
     } else if (msg.type === "retry" && !trailing) {
       handlers.onRetry?.({ chunk: msg.chunk, attempt: msg.attempt, delayMs: msg.delayMs, reason: msg.reason });
     } else if (msg.type === "complete" || msg.type === "partial") {
-      result = { content: msg.content, report: msg.report, partial: msg.type === "partial" };
+      const cues = Array.isArray(msg.cues) ? msg.cues : undefined;
+      result = { content: msg.content, cues, report: msg.report, partial: msg.type === "partial" };
       handlers.onProgress?.(100);
     } else if (msg.type === "error") {
       throw new Error(msg.message || "Unknown error");

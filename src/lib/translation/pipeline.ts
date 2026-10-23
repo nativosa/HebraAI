@@ -28,8 +28,10 @@ export type StreamEvent =
   | { type: "progress"; progress: number; currentChunk: number; totalChunks: number }
   // A request failed temporarily and will be repeated after delayMs.
   | { type: "retry"; chunk: number; attempt: number; delayMs: number; reason: string }
-  | { type: "complete"; content: string; report: TranslationReport }
-  | { type: "partial"; content: string; report: TranslationReport }
+  // cues: the result per cue, in input order (the translation, or the
+  // English text of an untranslated cue); content is buildSrt(cues).
+  | { type: "complete"; content: string; cues: Cue[]; report: TranslationReport }
+  | { type: "partial"; content: string; cues: Cue[]; report: TranslationReport }
   | { type: "error"; message: string; report?: TranslationReport };
 
 // Facts about the input that the final report carries through.
@@ -252,6 +254,9 @@ function finalEvent(
     return { type: "error", message, report };
   }
   // Input order; untranslated cues keep their original (English) text.
-  const content = buildSrt(cues.map((c) => ({ ...c, text: translations.get(c.id) ?? c.text })));
-  return failed.size === 0 ? { type: "complete", content, report } : { type: "partial", content, report };
+  const result = cues.map((c) => ({ ...c, text: translations.get(c.id) ?? c.text }));
+  const content = buildSrt(result);
+  return failed.size === 0
+    ? { type: "complete", content, cues: result, report }
+    : { type: "partial", content, cues: result, report };
 }
