@@ -1,141 +1,139 @@
 import React from "react";
+import { GLOSSARY_MAX_CHARS } from "@/lib/translation/options";
 import type { Mode, Settings, Tone } from "@/lib/types";
+import { Card, Switch, inputClass } from "./ui";
 
 type Props = {
   settings: Settings;
-  onChange: (next: Settings) => void;
-  // Shown under the mode setting (the character review in context mode).
-  children?: React.ReactNode;
+  onChange: (patch: Partial<Settings>) => void;
+  // Glossary entries recognised ("term = translation" lines).
+  glossaryEntries: number;
+  // Collapsed: a one-line summary with a button to open (mobile default).
+  open: boolean;
+  onToggle: () => void;
 };
 
-export default function SettingsPanel({ settings, onChange, children }: Props) {
-  const setTone = (tone: Tone) => onChange({ ...settings, tone });
-  const setPreserveBreaks = (preserveBreaks: boolean) =>
-    onChange({ ...settings, preserveBreaks });
-  const setMaxChars = (maxChars: number) => onChange({ ...settings, maxChars });
-  const setGlossary = (glossary: string) => onChange({ ...settings, glossary });
+const MODES: { value: Mode; label: string }[] = [
+  { value: "classic", label: "Classic" },
+  { value: "context", label: "Context-aware" },
+];
+
+export function settingsSummary(s: Settings, glossaryEntries: number): string {
+  return [
+    s.mode === "context" ? "Context-aware" : "Classic",
+    s.tone,
+    `${s.maxChars} chars`,
+    s.removeSoundEffects ? "sound effects removed" : null,
+    glossaryEntries ? `glossary ${glossaryEntries}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export default function SettingsPanel({ settings, onChange, glossaryEntries, open, onToggle }: Props) {
+  const toggle = (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls="translation-settings"
+      className="rounded text-[12.5px] font-medium text-accent-fg hover:underline focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none"
+    >
+      {open ? "Hide" : "Edit"}
+    </button>
+  );
 
   return (
-    <div className="mt-6">
-      <div className="text-sm font-semibold text-slate-800">2) Settings</div>
-
-      <div className="mt-3 grid grid-cols-1 gap-3">
-        <div className="rounded-xl border border-slate-200 p-3">
-          <label className="text-xs font-semibold text-slate-700">Translation mode</label>
-          <select
-            aria-label="Translation mode"
-            value={settings.mode}
-            onChange={(e) => onChange({ ...settings, mode: e.target.value as Mode })}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-          >
-            <option value="classic">Classic</option>
-            <option value="context">Context-aware (Hebrew gender)</option>
-          </select>
-          <p className="mt-2 text-xs text-slate-500">
-            Context-aware sends neighbouring lines, Hebrew gender rules and an optional character list with
-            each request (somewhat more tokens).
-          </p>
-          {settings.mode === "context" && (
-            <>
-              <label className="mt-3 block text-xs font-semibold text-slate-700">Story notes (optional)</label>
-              <textarea
-                aria-label="Story notes"
-                value={settings.notes}
-                maxLength={4000}
-                onChange={(e) => onChange({ ...settings, notes: e.target.value })}
-                placeholder="e.g. Dana and Mia are sisters; Alex is a man."
-                className="mt-2 h-16 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              />
-            </>
-          )}
-          {children}
-        </div>
-
-        <div className="rounded-xl border border-slate-200 p-3">
-          <label className="text-xs font-semibold text-slate-700">Tone</label>
-          <select
-            value={settings.tone}
-            onChange={(e) => setTone(e.target.value as Tone)}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-          >
-            <option>Neutral</option>
-            <option>Informal</option>
-            <option>Formal</option>
-          </select>
-          <p className="mt-2 text-xs text-slate-500">
-            Controls Hebrew phrasing style for dialogue.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 p-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-slate-700">
-              Preserve line breaks
-            </label>
-            <input
-              type="checkbox"
-              checked={settings.preserveBreaks}
-              onChange={(e) => setPreserveBreaks(e.target.checked)}
-              className="h-4 w-4"
-            />
+    <Card title="Translation" action={toggle}>
+      {!open && <p className="text-[13px] text-fg-2">{settingsSummary(settings, glossaryEntries)}</p>}
+      <div id="translation-settings" hidden={!open} className="flex flex-col gap-3">
+        <fieldset>
+          <legend className="mb-1.5 text-[12.5px] font-medium text-fg-2">Mode</legend>
+          <div className="flex rounded-lg border border-line bg-surface-2 p-0.5">
+            {MODES.map((m) => (
+              <label
+                key={m.value}
+                className="flex-1 cursor-pointer rounded-md px-2 py-1.5 text-center text-[13px] text-muted has-checked:bg-surface has-checked:font-medium has-checked:text-fg has-checked:shadow-sm has-focus-visible:ring-3 has-focus-visible:ring-ring dark:has-checked:bg-surface-3"
+              >
+                <input
+                  type="radio"
+                  name="mode"
+                  value={m.value}
+                  checked={settings.mode === m.value}
+                  onChange={() => onChange({ mode: m.value })}
+                  className="sr-only"
+                />
+                {m.label}
+              </label>
+            ))}
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Keeps subtitle readability similar to the original.
+          <p className="mt-1.5 text-xs text-muted">
+            {settings.mode === "context"
+              ? "Sends neighbouring lines, Hebrew gender rules and the character list with each request (about 20% more tokens)."
+              : "Translates each block of 60 subtitles on its own."}
           </p>
-        </div>
+        </fieldset>
 
-        <div className="rounded-xl border border-slate-200 p-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-slate-700">
-              Remove sound-effect lines
-            </label>
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-fg-2">
+            Tone
+            <select
+              value={settings.tone}
+              onChange={(e) => onChange({ tone: e.target.value as Tone })}
+              className={`${inputClass} h-8.5`}
+            >
+              <option>Neutral</option>
+              <option>Informal</option>
+              <option>Formal</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5 text-[12.5px] font-medium text-fg-2">
+            Max chars per line
             <input
-              type="checkbox"
-              checked={settings.removeSoundEffects}
-              onChange={(e) =>
-                onChange({ ...settings, removeSoundEffects: e.target.checked })
-              }
-              className="h-4 w-4"
+              type="number"
+              min={20}
+              max={80}
+              value={settings.maxChars}
+              onChange={(e) => onChange({ maxChars: Number(e.target.value) })}
+              className={`${inputClass} h-8.5 font-mono`}
             />
+          </label>
+        </div>
+
+        <Switch label="Preserve line breaks" checked={settings.preserveBreaks} onChange={(v) => onChange({ preserveBreaks: v })} />
+        <Switch
+          label="Remove sound effects"
+          hint="[music], (sighs)"
+          checked={settings.removeSoundEffects}
+          onChange={(v) => onChange({ removeSoundEffects: v })}
+        />
+
+        <details className="group rounded-lg border border-line bg-surface-2" open={!!settings.glossary || undefined}>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2 text-[13px] font-medium text-fg-2 focus-visible:ring-3 focus-visible:ring-ring focus-visible:outline-none">
+            <span>
+              Glossary{" "}
+              <span className="font-normal text-muted">
+                {glossaryEntries ? `${glossaryEntries} term${glossaryEntries === 1 ? "" : "s"}` : "optional"}
+              </span>
+            </span>
+            <span aria-hidden className="text-muted transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <div className="px-2.5 pb-2.5">
+            <textarea
+              aria-label="Glossary"
+              value={settings.glossary}
+              maxLength={GLOSSARY_MAX_CHARS}
+              onChange={(e) => onChange({ glossary: e.target.value })}
+              placeholder={"One per line, e.g.\nJohn = ג׳ון\nFBI = FBI"}
+              rows={4}
+              className={`${inputClass} resize-y py-2 leading-snug`}
+            />
+            <p className="mt-1 text-xs text-muted">Forces consistent translations of names and terms.</p>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Removes lines like [music], (laughs), ♪ singing ♪ before
-            translation.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 p-3">
-          <label className="text-xs font-semibold text-slate-700">
-            Max characters per line
-          </label>
-          <input
-            type="number"
-            min={20}
-            max={80}
-            value={settings.maxChars}
-            onChange={(e) => setMaxChars(Number(e.target.value))}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <p className="mt-2 text-xs text-slate-500">
-            Helps keep captions comfortable on screen.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 p-3">
-          <label className="text-xs font-semibold text-slate-700">
-            Glossary (optional)
-          </label>
-          <textarea
-            value={settings.glossary}
-            onChange={(e) => setGlossary(e.target.value)}
-            placeholder={`One per line, e.g.\nJohn = ג׳ון\nFBI = FBI`}
-            className="mt-2 h-24 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <p className="mt-2 text-xs text-slate-500">
-            Forces consistent translation of names/terms.
-          </p>
-        </div>
+        </details>
       </div>
-    </div>
+    </Card>
   );
 }
