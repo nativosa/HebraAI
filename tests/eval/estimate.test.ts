@@ -43,6 +43,11 @@ describe("costUsd / pricesFrom", () => {
 
   it("needs both input and output prices", () => {
     expect(pricesFrom({ OPENAI_PRICE_INPUT_PER_MTOK: "2", OPENAI_PRICE_OUTPUT_PER_MTOK: "8" })).toEqual({ inputPerMTok: 2, outputPerMTok: 8 });
+    expect(
+      pricesFrom({ OPENAI_PRICE_INPUT_PER_MTOK: "1.75", OPENAI_PRICE_CACHED_INPUT_PER_MTOK: "0.175", OPENAI_PRICE_OUTPUT_PER_MTOK: "14" })
+    ).toEqual({ inputPerMTok: 1.75, cachedInputPerMTok: 0.175, outputPerMTok: 14 });
+    // Estimates assume no cached input: the full input price applies.
+    expect(costUsd({ inputTokens: 1_000_000, outputTokens: 0 }, { inputPerMTok: 1.75, cachedInputPerMTok: 0.175, outputPerMTok: 14 })).toBe(1.75);
     expect(pricesFrom({ OPENAI_PRICE_INPUT_PER_MTOK: "2" })).toBeNull();
     expect(pricesFrom({ OPENAI_PRICE_INPUT_PER_MTOK: "x", OPENAI_PRICE_OUTPUT_PER_MTOK: "8" })).toBeNull();
     expect(pricesFrom({})).toBeNull();

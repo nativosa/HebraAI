@@ -87,6 +87,8 @@ describe("estimateCostUsd", () => {
     const u = { inputTokens: 2_000_000, cachedInputTokens: 1_000_000, outputTokens: 500_000, reasoningTokens: 100_000 };
     expect(estimateCostUsd(u, { inputPerMTok: 1, cachedInputPerMTok: 0.1, outputPerMTok: 4 })).toBe(3.1);
     expect(estimateCostUsd(u, { inputPerMTok: 1, outputPerMTok: 4 })).toBe(4);
+    // GPT-5.2 standard rates: 1M uncached × 1.75 + 1M cached × 0.175 + 0.5M output × 14.
+    expect(estimateCostUsd(u, { inputPerMTok: 1.75, cachedInputPerMTok: 0.175, outputPerMTok: 14 })).toBe(8.925);
   });
 });
 

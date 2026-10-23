@@ -149,7 +149,7 @@ describe("scoring and reports", () => {
       byCategory: { "speaker-gender": { passed: 1, total: 2, rate: 0.5 } },
       byDimension: { "speaker-gender": { passed: 1, total: 2, rate: 0.5, neutral: 0 } },
       statuses: { complete: 1, partial: 1 },
-      metrics: { requests: 3, inputTokens: 30, outputTokens: 5, elapsedMs: 150, estimatedCostUsd: 0.001 },
+      metrics: { requests: 3, inputTokens: 30, cachedInputTokens: 0, outputTokens: 5, reasoningTokens: 0, elapsedMs: 150, estimatedCostUsd: 0.001 },
     });
   });
 

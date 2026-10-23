@@ -40,11 +40,13 @@ const sumMetrics = (scores) =>
     (m, s) => ({
       requests: m.requests + (s.metrics?.requests ?? 0),
       inputTokens: m.inputTokens + (s.metrics?.inputTokens ?? 0),
+      cachedInputTokens: m.cachedInputTokens + (s.metrics?.cachedInputTokens ?? 0),
       outputTokens: m.outputTokens + (s.metrics?.outputTokens ?? 0),
+      reasoningTokens: m.reasoningTokens + (s.metrics?.reasoningTokens ?? 0),
       elapsedMs: m.elapsedMs + (s.metrics?.elapsedMs ?? 0),
       estimatedCostUsd: Math.round((m.estimatedCostUsd + (s.metrics?.estimatedCostUsd ?? 0)) * 1e6) / 1e6,
     }),
-    { requests: 0, inputTokens: 0, outputTokens: 0, elapsedMs: 0, estimatedCostUsd: 0 }
+    { requests: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, elapsedMs: 0, estimatedCostUsd: 0 }
   );
 
 // Aggregates case scores of one mode.

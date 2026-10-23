@@ -44,7 +44,8 @@ export function runMarkdown(report) {
     "|---|---|---|---|",
     ...Object.entries(s.byDimension).map(([k, v]) => `| ${k} | ${v.passed}/${v.total} | ${pct(v.rate)} | ${v.neutral ?? 0} |`),
     "",
-    `Requests ${s.metrics.requests} · input tokens ${s.metrics.inputTokens} · output tokens ${s.metrics.outputTokens} · ` +
+    `Requests ${s.metrics.requests} · input tokens ${s.metrics.inputTokens} (cached ${s.metrics.cachedInputTokens ?? 0}) · ` +
+      `output tokens ${s.metrics.outputTokens} (reasoning ${s.metrics.reasoningTokens ?? 0}) · ` +
       `time ${(s.metrics.elapsedMs / 1000).toFixed(1)} s` +
       (s.metrics.estimatedCostUsd ? ` · estimated cost $${s.metrics.estimatedCostUsd.toFixed(4)}` : ""),
     "",
@@ -77,7 +78,7 @@ export function compareMarkdown(baseline, candidate) {
     "",
     "| Metric | " + c.baseline + " | " + c.candidate + " |",
     "|---|---|---|",
-    ...["requests", "inputTokens", "outputTokens", "elapsedMs", "estimatedCostUsd"].map(
+    ...["requests", "inputTokens", "cachedInputTokens", "outputTokens", "reasoningTokens", "elapsedMs", "estimatedCostUsd"].map(
       (k) => `| ${k} | ${m.baseline[k]} | ${m.candidate[k]} |`
     ),
     "",

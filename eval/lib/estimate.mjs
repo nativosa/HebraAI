@@ -43,11 +43,16 @@ export function costUsd({ inputTokens, outputTokens }, prices) {
 }
 
 // Reads OPENAI_PRICE_* from an env object; null unless input and output are set.
+// The cached-input price is optional and only shown: estimates assume no
+// cached input (full input price), while actual costs come from the app
+// report, which prices cached input separately.
 export function pricesFrom(env) {
   const n = (k) => (env[k] !== undefined && env[k] !== "" && Number.isFinite(Number(env[k])) && Number(env[k]) >= 0 ? Number(env[k]) : undefined);
   const inputPerMTok = n("OPENAI_PRICE_INPUT_PER_MTOK");
   const outputPerMTok = n("OPENAI_PRICE_OUTPUT_PER_MTOK");
-  return inputPerMTok === undefined || outputPerMTok === undefined ? null : { inputPerMTok, outputPerMTok };
+  const cachedInputPerMTok = n("OPENAI_PRICE_CACHED_INPUT_PER_MTOK");
+  if (inputPerMTok === undefined || outputPerMTok === undefined) return null;
+  return { inputPerMTok, outputPerMTok, ...(cachedInputPerMTok === undefined ? {} : { cachedInputPerMTok }) };
 }
 
 // Whether a case with this estimated cost may start.

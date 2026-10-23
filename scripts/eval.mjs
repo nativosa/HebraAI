@@ -145,7 +145,11 @@ function printPlan({ cases, dataset, modes, repeat, plan, prices, budgetUsd, mar
       `  requests:  ~${plan.total.requests} (translation; character analysis: 0 - not part of these modes)`,
       `  tokens:    ~${plan.total.inputTokens} input, ~${plan.total.outputTokens} output (conservative estimate)`,
       `  cost:      ${plan.totalUsd === null ? usd(null) : `~${usd(plan.totalUsd)} translation + $0.0000 character analysis`}` +
-        (prices ? `  (prices: $${prices.inputPerMTok}/1M input, $${prices.outputPerMTok}/1M output)` : ""),
+        (prices
+          ? `  (prices: $${prices.inputPerMTok}/1M input, ` +
+            (prices.cachedInputPerMTok === undefined ? "" : `$${prices.cachedInputPerMTok}/1M cached input, `) +
+            `$${prices.outputPerMTok}/1M output; the estimate assumes no cached input)`
+          : ""),
       enforceBudget
         ? `  budget:    $${budgetUsd.toFixed(2)} per run; a case starts only if spent + estimate x ${margin} fits; otherwise the run stops`
         : "",
@@ -199,7 +203,9 @@ async function runCase(port, app, c, mode) {
       requests: r?.requests ?? 0,
       retries: r?.retries ?? 0,
       inputTokens: r?.usage?.inputTokens ?? 0,
+      cachedInputTokens: r?.usage?.cachedInputTokens ?? 0,
       outputTokens: r?.usage?.outputTokens ?? 0,
+      reasoningTokens: r?.usage?.reasoningTokens ?? 0,
       elapsedMs: r?.elapsedMs ?? 0,
       ...(r?.estimatedCostUsd !== undefined ? { estimatedCostUsd: r.estimatedCostUsd } : {}),
     },
