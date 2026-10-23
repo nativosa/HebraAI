@@ -1,6 +1,6 @@
 // Preferences kept in the browser's localStorage. An allow-list: theme,
-// translation settings and export options. Never subtitle text,
-// translations, edits, character sheets or story notes.
+// translation settings, export options and the panel layout. Never
+// subtitle text, translations, edits, character sheets or story notes.
 
 import { GLOSSARY_MAX_CHARS } from "@/lib/translation/options";
 import type { Settings } from "@/lib/types";
@@ -11,7 +11,12 @@ export type Theme = "system" | "light" | "dark";
 // Settings without the story notes, which describe one film.
 export type SavedSettings = Omit<Settings, "notes">;
 
-export type Prefs = { theme: Theme; settings: SavedSettings; export: ExportOptions };
+export type Prefs = {
+  theme: Theme;
+  settings: SavedSettings;
+  export: ExportOptions;
+  sidebarCollapsed: boolean; // desktop: the workflow panel is hidden
+};
 
 export const PREFS_KEY = "hebraai.prefs.v1";
 
@@ -27,16 +32,14 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const DEFAULT_PREFS: Prefs = {
   theme: "system",
-  settings: {
-    mode: DEFAULT_SETTINGS.mode,
-    tone: DEFAULT_SETTINGS.tone,
-    preserveBreaks: DEFAULT_SETTINGS.preserveBreaks,
-    maxChars: DEFAULT_SETTINGS.maxChars,
-    glossary: DEFAULT_SETTINGS.glossary,
-    removeSoundEffects: DEFAULT_SETTINGS.removeSoundEffects,
-  },
+  settings: pickSettings(DEFAULT_SETTINGS),
   export: DEFAULT_EXPORT_OPTIONS,
+  sidebarCollapsed: false,
 };
+
+function pickSettings({ mode, tone, preserveBreaks, maxChars, glossary, removeSoundEffects }: SavedSettings): SavedSettings {
+  return { mode, tone, preserveBreaks, maxChars, glossary, removeSoundEffects };
+}
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : {});
@@ -66,18 +69,19 @@ export function parsePrefs(raw: unknown): Prefs {
       removeSoundEffects: bool(s.removeSoundEffects, d.settings.removeSoundEffects),
     },
     export: { bom: bool(e.bom, d.export.bom), renumber: bool(e.renumber, d.export.renumber) },
+    sidebarCollapsed: bool(p.sidebarCollapsed, d.sidebarCollapsed),
   };
 }
 
-// The stored form: only the allowed fields, whatever else `settings` holds.
-export function serializePrefs(theme: Theme, settings: Settings, exportOptions: ExportOptions): string {
-  const { mode, tone, preserveBreaks, maxChars, glossary, removeSoundEffects } = settings;
-  const prefs: Prefs = {
-    theme,
-    settings: { mode, tone, preserveBreaks, maxChars, glossary, removeSoundEffects },
-    export: { bom: exportOptions.bom, renumber: exportOptions.renumber },
+// The stored form: only the allowed fields, whatever else the objects hold.
+export function serializePrefs(prefs: Prefs): string {
+  const stored: Prefs = {
+    theme: prefs.theme,
+    settings: pickSettings(prefs.settings),
+    export: { bom: prefs.export.bom, renumber: prefs.export.renumber },
+    sidebarCollapsed: prefs.sidebarCollapsed,
   };
-  return JSON.stringify(prefs);
+  return JSON.stringify(stored);
 }
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem">;
@@ -93,11 +97,23 @@ export function loadPrefs(storage: Storage | undefined): Prefs {
 }
 
 // Returns false when the preferences could not be stored.
-export function savePrefs(storage: Storage | undefined, theme: Theme, settings: Settings, exportOptions: ExportOptions): boolean {
+export function savePrefs(storage: Storage | undefined, prefs: Prefs): boolean {
   try {
-    storage?.setItem(PREFS_KEY, serializePrefs(theme, settings, exportOptions));
+    storage?.setItem(PREFS_KEY, serializePrefs(prefs));
     return !!storage;
   } catch {
     return false;
   }
 }
+
+// "dark" or "light" for a theme preference.
+export function resolveTheme(theme: Theme, systemDark: boolean): "dark" | "light" {
+  return theme === "dark" || (theme === "system" && systemDark) ? "dark" : "light";
+}
+
+// Runs in <head> before the page paints, so the stored theme shows without
+// a flash. Must match resolveTheme; tested against it.
+export const THEME_SCRIPT =
+  `(function(){var t;try{t=JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)})||"{}").theme}catch(e){}` +
+  `var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);` +
+  `document.documentElement.dataset.theme=d?"dark":"light"})()`;

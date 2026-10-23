@@ -97,12 +97,12 @@ describe("filterRows and rowCounts", () => {
   const edits = new Map([[4, "להתראות"]]);
   const ids = (f: Parameters<typeof filterRows>[1], q = "") => filterRows(rows, f, q, edits).map((r) => r.id);
 
-  it("filters by status and edits; removed rows only under 'removed'", () => {
-    expect(ids("all")).toEqual([1, 3, 4]);
+  it("filters by status and edits; 'all' includes removed rows", () => {
+    expect(ids("all")).toEqual([1, 2, 3, 4]);
     expect(ids("untranslated")).toEqual([3]);
     expect(ids("edited")).toEqual([4]);
     expect(ids("removed")).toEqual([2]);
-    expect(rowCounts(rows, edits)).toEqual({ all: 3, untranslated: 1, edited: 1, removed: 1, missing: 0 });
+    expect(rowCounts(rows, edits)).toEqual({ all: 4, untranslated: 1, edited: 1, removed: 1, missing: 0 });
   });
 
   it("searches English and the current Hebrew, case-insensitively", () => {
@@ -112,6 +112,12 @@ describe("filterRows and rowCounts", () => {
     expect(ids("all", "ביי")).toEqual([]);
     expect(ids("untranslated", "hello")).toEqual([]);
     expect(ids("removed", "music")).toEqual([2]);
+  });
+
+  it("a manually translated cue no longer counts as untranslated", () => {
+    const manual = new Map([[3, "בוא הנה"]]);
+    expect(filterRows(rows, "untranslated", "", manual)).toEqual([]);
+    expect(rowCounts(rows, manual)).toMatchObject({ untranslated: 0, edited: 1 });
   });
 
   it("never changes the rows", () => {

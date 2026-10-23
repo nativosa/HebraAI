@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { exportName } from "@/lib/review/filename";
-import { DEFAULT_PREFS, DEFAULT_SETTINGS, PREFS_KEY, loadPrefs, parsePrefs, savePrefs } from "@/lib/review/prefs";
+import { runInNewContext } from "node:vm";
+import {
+  DEFAULT_PREFS,
+  DEFAULT_SETTINGS,
+  PREFS_KEY,
+  THEME_SCRIPT,
+  loadPrefs,
+  parsePrefs,
+  resolveTheme,
+  savePrefs,
+  type Prefs,
+  type Theme,
+} from "@/lib/review/prefs";
 import { unsavedWarning } from "@/lib/review/unsaved";
 
 function memoryStorage(initial: Record<string, string> = {}) {
@@ -14,10 +26,12 @@ function memoryStorage(initial: Record<string, string> = {}) {
 
 describe("preferences", () => {
   const settings = { ...DEFAULT_SETTINGS, mode: "context" as const, tone: "Formal" as const, maxChars: 35, glossary: "John = ג׳ון" };
+  const prefs = (extra: object = {}): Prefs =>
+    ({ theme: "dark", settings, export: { bom: true, renumber: false }, sidebarCollapsed: true, ...extra }) as Prefs;
 
   it("round-trips the allowed fields only; story notes are never stored", () => {
     const storage = memoryStorage();
-    expect(savePrefs(storage, "dark", { ...settings, notes: "secret plot" }, { bom: true, renumber: false })).toBe(true);
+    expect(savePrefs(storage, prefs({ settings: { ...settings, notes: "secret plot" } }))).toBe(true);
     const stored = storage.data.get(PREFS_KEY)!;
     expect(stored).not.toContain("secret plot");
     expect(Object.keys(JSON.parse(stored).settings).sort()).toEqual(
@@ -27,13 +41,14 @@ describe("preferences", () => {
       theme: "dark",
       settings: { mode: "context", tone: "Formal", preserveBreaks: true, maxChars: 35, glossary: "John = ג׳ון", removeSoundEffects: true },
       export: { bom: true, renumber: false },
+      sidebarCollapsed: true,
     });
   });
 
   it("drops fields that are not settings", () => {
     const storage = memoryStorage();
-    savePrefs(storage, "light", { ...settings, characters: "[...]", file: "x" } as typeof settings, DEFAULT_PREFS.export);
-    expect(storage.data.get(PREFS_KEY)).not.toMatch(/characters|file/);
+    savePrefs(storage, prefs({ settings: { ...settings, characters: "[...]", file: "x" }, edits: { 1: "x" } }));
+    expect(storage.data.get(PREFS_KEY)).not.toMatch(/characters|file|edits/);
   });
 
   it("defaults for missing, corrupt or invalid data", () => {
@@ -46,6 +61,7 @@ describe("preferences", () => {
         theme: "neon",
         settings: { mode: "fast", tone: "formal", preserveBreaks: "yes", maxChars: 500, glossary: "x".repeat(4001), removeSoundEffects: 1 },
         export: { bom: "true", renumber: null },
+        sidebarCollapsed: "yes",
       })
     ).toEqual(DEFAULT_PREFS);
     expect(parsePrefs({ settings: { maxChars: 42.5, preserveBreaks: false } }).settings).toMatchObject({
@@ -64,8 +80,32 @@ describe("preferences", () => {
       },
     };
     expect(loadPrefs(failing)).toEqual(DEFAULT_PREFS);
-    expect(savePrefs(failing, "dark", DEFAULT_SETTINGS, DEFAULT_PREFS.export)).toBe(false);
-    expect(savePrefs(undefined, "dark", DEFAULT_SETTINGS, DEFAULT_PREFS.export)).toBe(false);
+    expect(savePrefs(failing, DEFAULT_PREFS)).toBe(false);
+    expect(savePrefs(undefined, DEFAULT_PREFS)).toBe(false);
+  });
+});
+
+describe("theme", () => {
+  // Runs the pre-paint script against a stored value and a system setting.
+  function runScript(stored: string | null, systemDark: boolean) {
+    const document = { documentElement: { dataset: {} as Record<string, string> } };
+    runInNewContext(THEME_SCRIPT, {
+      localStorage: { getItem: (k: string) => (k === PREFS_KEY ? stored : null) },
+      matchMedia: () => ({ matches: systemDark }),
+      document,
+    });
+    return document.documentElement.dataset.theme;
+  }
+
+  it.each(["system", "light", "dark"] as Theme[])("the pre-paint script matches resolveTheme for %s", (theme) => {
+    for (const systemDark of [false, true]) {
+      expect(runScript(JSON.stringify({ theme }), systemDark)).toBe(resolveTheme(theme, systemDark));
+    }
+  });
+
+  it("the pre-paint script follows the system for missing or corrupt data", () => {
+    expect(runScript(null, true)).toBe("dark");
+    expect(runScript("{bad", false)).toBe("light");
   });
 });
 

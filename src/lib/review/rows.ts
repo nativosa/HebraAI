@@ -64,15 +64,20 @@ export function effectiveText(row: ReviewRow, edits: Edits): string | null {
   return edits.get(row.id) ?? row.output;
 }
 
-// all: every row except removed ones. untranslated includes missing rows.
+// all: every row (removed ones are shown muted). untranslated: cues still
+// without a Hebrew text (not translated by the model nor edited), and
+// missing rows.
 export type RowFilter = "all" | "untranslated" | "edited" | "removed";
+
+const needsWork = (r: ReviewRow, edits: Edits) =>
+  (r.status === "untranslated" && !edits.has(r.id)) || r.status === "missing";
 
 export function rowCounts(rows: ReviewRow[], edits: Edits): Record<RowFilter | "missing", number> {
   const counts = { all: 0, untranslated: 0, edited: 0, removed: 0, missing: 0 };
   for (const r of rows) {
+    counts.all++;
     if (r.status === "removed") counts.removed++;
-    else counts.all++;
-    if (r.status === "untranslated" || r.status === "missing") counts.untranslated++;
+    if (needsWork(r, edits)) counts.untranslated++;
     if (r.status === "missing") counts.missing++;
     if (edits.has(r.id)) counts.edited++;
   }
@@ -86,12 +91,10 @@ export function filterRows(rows: ReviewRow[], filter: RowFilter, query: string, 
   const q = query.trim().toLowerCase();
   return rows.filter((r) => {
     const shown =
-      filter === "removed"
-        ? r.status === "removed"
-        : r.status !== "removed" &&
-          (filter === "all" ||
-            (filter === "untranslated" && (r.status === "untranslated" || r.status === "missing")) ||
-            (filter === "edited" && edits.has(r.id)));
+      filter === "all" ||
+      (filter === "removed" && r.status === "removed") ||
+      (filter === "untranslated" && needsWork(r, edits)) ||
+      (filter === "edited" && edits.has(r.id));
     if (!shown || !q) return shown;
     return r.en.toLowerCase().includes(q) || (effectiveText(r, edits) ?? "").toLowerCase().includes(q);
   });
