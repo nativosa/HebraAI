@@ -46,13 +46,31 @@ export function responseFor(text, { status = "completed", incompleteReason, refu
 // Also used by the unit tests as the stub model, so they translate exactly
 // like the server that produced the legacy baseline.
 export function echoItems(body) {
-  // The route sends one user message whose text ends with "\n\n<JSON array>".
+  // The routes send one user message whose text ends with "\n\n<JSON>": an
+  // array of items (classic), { context_before, items, context_after }
+  // (context mode) or an array of { n, text } (character analysis).
   const text = body?.input?.[0]?.content?.[0]?.text ?? "";
-  const json = text.slice(text.indexOf("\n\n[") + 2);
-  const payload = JSON.parse(json);
+  const payload = JSON.parse(text.slice(text.lastIndexOf("\n\n") + 2));
+  if (body?.text?.format?.name === "character_sheet") return fakeCharacters(payload);
+  const items = Array.isArray(payload) ? payload : payload.items;
   return {
-    items: payload.map((p) => ({ index: p.index, text_he: `[HE] ${p.text}` })),
+    items: items.map((p) => ({ index: p.index, text_he: `[HE] ${p.text}` })),
   };
+}
+
+// Character analysis: one character per speaker label ("MARY: ..."), gender
+// unknown, with the subtitles that carry the label as evidence.
+function fakeCharacters(cues) {
+  const byName = new Map();
+  for (const { n, text } of cues) {
+    const label = /^([A-Z][A-Z' -]*):/.exec(text)?.[1];
+    if (!label) continue;
+    const name = label.charAt(0) + label.slice(1).toLowerCase();
+    if (!byName.has(name)) byName.set(name, { name, hebrewName: "", aliases: [], gender: "unknown", confidence: "low", evidence: [] });
+    const c = byName.get(name);
+    if (c.evidence.length < 5) c.evidence.push(n);
+  }
+  return { characters: [...byName.values()] };
 }
 
 // Reply shape a responder may return (all fields optional):
